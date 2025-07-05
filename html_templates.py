@@ -1346,7 +1346,7 @@ def get_edit_page_javascript(filename):
             
             // 计算缩放方向和幅度（修正方向：向下滚动放大，向上滚动缩小）
             const delta = e.deltaY < 0 ? 1 : -1; // 修正：deltaY < 0 表示向上滚动（缩小），deltaY > 0 表示向下滚动（放大）
-            const zoomStep = 1.05; // 稍微增大步长，使缩放更明显
+            const zoomStep = 1.3; // 增加缩放步长，提供更明显的缩放效果
             const newZoomFactor = delta > 0 ? 
                 Math.min(oldZoomFactor * zoomStep, 5) : 
                 Math.max(oldZoomFactor / zoomStep, 0.2);
