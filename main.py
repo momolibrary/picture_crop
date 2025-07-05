@@ -296,7 +296,33 @@ async def auto_detect_corners_api(filename: str):
         }
 
 
-# ...existing code...
+@app.get("/next_file/{current_filename}")
+async def get_next_file(current_filename: str):
+    """获取下一个待处理的图片文件名"""
+    try:
+        files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        
+        if not files:
+            return {"success": False, "message": "没有待处理的文件"}
+        
+        # 如果当前文件还在列表中（这种情况不应该发生，因为裁剪后文件已移动）
+        if current_filename in files:
+            files.remove(current_filename)
+        
+        if not files:
+            return {"success": False, "message": "所有文件已处理完成"}
+        
+        # 返回第一个文件（按字母顺序）
+        next_file = sorted(files)[0]
+        return {
+            "success": True, 
+            "next_filename": next_file,
+            "remaining_count": len(files)
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 if __name__ == "__main__":
     import uvicorn

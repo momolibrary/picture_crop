@@ -266,6 +266,23 @@ def generate_edit_html(filename):
             </div>
         </div>
         
+        <div class="control-section">
+            <div class="section-header">
+                <h4>⚙️ 工作流设置</h4>
+                <div class="workflow-status" id="workflowStatus">自动跳转</div>
+            </div>
+            <div class="workflow-controls">
+                <label class="workflow-option">
+                    <input type="checkbox" id="autoNextFile" checked onchange="updateWorkflowStatus()">
+                    <span class="workflow-label">裁剪完成后自动跳转到下一个图片</span>
+                </label>
+                <div class="workflow-info">
+                    <span class="workflow-icon">ℹ️</span>
+                    <span class="workflow-text">关闭此选项将在裁剪完成后停留在当前页面</span>
+                </div>
+            </div>
+        </div>
+        
         <div class="control-section tips-section">
             <div class="section-header">
                 <h4>💡 操作提示</h4>
@@ -676,6 +693,62 @@ def get_edit_page_styles():
             background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             border-color: #2980b9;
+        }
+        
+        /* 工作流控制样式 */
+        .workflow-status {
+            font-size: 12px;
+            color: #6c757d;
+            background: #e8f5e8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+            color: #2e7d32;
+        }
+        
+        .workflow-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .workflow-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .workflow-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .workflow-label {
+            font-size: 13px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .workflow-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .workflow-icon {
+            font-size: 14px;
+        }
+        
+        .workflow-text {
+            line-height: 1.3;
         }
         
         /* 提示区域样式 */
@@ -2132,8 +2205,44 @@ def get_edit_page_javascript(filename):
             .then(response => response.json())
             .then(data => {{
                 if (data.success) {{
-                    document.getElementById('status').innerHTML = 
-                        '<p style="color: green;">✓ 裁剪完成并已移至processed文件夹！<br><a href="/download/' + data.filename + '">下载处理结果</a><br><a href="/">返回首页</a></p>';
+                    // 检查用户是否开启了自动跳转功能
+                    const autoNextFile = document.getElementById('autoNextFile');
+                    const shouldAutoJump = autoNextFile && autoNextFile.checked;
+                    
+                    if (shouldAutoJump) {{
+                        // 显示成功消息并准备跳转
+                        document.getElementById('status').innerHTML = 
+                            '<p style="color: green;">✓ 裁剪完成！正在跳转到下一个图片...</p>';
+                        
+                        // 获取下一个待处理的文件
+                        fetch('/next_file/{filename}')
+                        .then(response => response.json())
+                        .then(nextData => {{
+                            if (nextData.success) {{
+                                // 显示跳转提示
+                                document.getElementById('status').innerHTML = 
+                                    '<p style="color: green;">✓ 裁剪完成！正在处理下一个图片: ' + nextData.next_filename + ' (剩余 ' + nextData.remaining_count + ' 个)</p>';
+                                
+                                // 1秒后跳转到下一个图片
+                                setTimeout(() => {{
+                                    window.location.href = '/edit/' + encodeURIComponent(nextData.next_filename);
+                                }}, 1000);
+                            }} else {{
+                                // 没有更多文件，显示完成信息
+                                document.getElementById('status').innerHTML = 
+                                    '<p style="color: green;">🎉 所有图片处理完成！<br><a href="/download/' + data.filename + '">下载最后的处理结果</a><br><a href="/">返回首页查看结果</a></p>';
+                            }}
+                        }})
+                        .catch(error => {{
+                            // 获取下一个文件失败，提供手动选择
+                            document.getElementById('status').innerHTML = 
+                                '<p style="color: green;">✓ 裁剪完成！<br><a href="/download/' + data.filename + '">下载处理结果</a><br><a href="/">返回首页继续处理</a></p>';
+                        }});
+                    }} else {{
+                        // 用户关闭了自动跳转，显示传统的完成信息
+                        document.getElementById('status').innerHTML = 
+                            '<p style="color: green;">✓ 裁剪完成并已移至processed文件夹！<br><a href="/download/' + data.filename + '">下载处理结果</a><br><a href="/">返回首页</a></p>';
+                    }}
                 }} else {{
                     document.getElementById('status').innerHTML = 
                         '<p style="color: red;">✗ 裁剪失败：' + data.error + '</p>';
@@ -2170,6 +2279,22 @@ def get_edit_page_javascript(filename):
                 editStatusMini.style.color = color;
             }}
         }}
+        
+        // 新增：更新工作流状态显示
+        function updateWorkflowStatus() {{
+            const autoNextFile = document.getElementById('autoNextFile');
+            const workflowStatus = document.getElementById('workflowStatus');
+            if (autoNextFile && workflowStatus) {{
+                workflowStatus.textContent = autoNextFile.checked ? '自动跳转' : '手动选择';
+                workflowStatus.style.background = autoNextFile.checked ? '#e8f5e8' : '#fff3e0';
+                workflowStatus.style.color = autoNextFile.checked ? '#2e7d32' : '#f57c00';
+            }}
+        }}
+        
+        // 初始化工作流状态
+        document.addEventListener('DOMContentLoaded', function() {{
+            updateWorkflowStatus();
+        }});
         
         // 重写原有函数以添加状态更新
         const originalAutoDetectCorners = autoDetectCorners;
