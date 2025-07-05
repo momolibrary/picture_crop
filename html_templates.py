@@ -192,21 +192,6 @@ def generate_edit_html(filename):
     </div>
     <h2>裁剪图片: {filename}</h2>
     
-    <div class="instructions">
-        <h3>操作说明：</h3>
-        <ul>
-            <li><strong>🤖 自动检测角点</strong>：智能识别PPT的四个角点，基于边缘检测和轮廓分析</li>
-            <li><strong>红色圆点（1,2,3,4）</strong>：四个角点，可自由拖拽调整位置</li>
-            <li><strong>蓝色菱形（上/右/下/左）</strong>：边的中点控制器，可沿垂直于边的方向拖动，实现整条边的平行移动</li>
-            <li><strong>绿色线条和半透明区域</strong>：裁剪区域边界和预览</li>
-            <li><strong>瞄准镜放大镜</strong>：拖拽角点时自动显示高倍放大窗口，帮助精确定位</li>
-            <li><strong>缩放控制</strong>：使用放大/缩小按钮或<strong>鼠标滚轮</strong>调整图片显示大小，便于精确操作</li>
-            <li><strong>画布平移</strong>：在空白区域拖拽可平移画布，用于查看和调整移出视口的角点</li>
-            <li><strong>智能缩放</strong>：鼠标滚轮缩放时会以鼠标位置为中心进行缩放，按钮缩放以画布中心为基准</li>
-            <li><strong>操作技巧</strong>：推荐先点击"自动检测角点"，然后根据需要手动微调，最后用边控制器进行精确调整</li>
-        </ul>
-    </div>
-    
     <div class="canvas-container">
         <div class="zoom-info">缩放: <span id="zoomLevel">100%</span></div>
         <canvas id="canvas" width="900" height="700"></canvas>
@@ -217,33 +202,153 @@ def generate_edit_html(filename):
         </div>
     </div>
     
-    <div class="controls">
-        <div class="control-group">
-            <h4>视图控制</h4>
-            <button class="zoom-in zoom-btn" onclick="zoomIn()">放大 +</button>
-            <button class="zoom-out zoom-btn" onclick="zoomOut()">缩小 −</button>
-            <button class="zoom-reset zoom-btn" onclick="resetZoom()">重置</button>
+    <div class="controls-panel">
+        <div class="control-section">
+            <div class="section-header">
+                <h4>🔍 视图控制</h4>
+                <div class="zoom-level-display">缩放: <span id="zoomLevelInPanel">100%</span></div>
+            </div>
+            <div class="control-buttons">
+                <button class="ctrl-btn zoom-in-btn" onclick="zoomIn()" title="放大视图">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">放大</span>
+                </button>
+                <button class="ctrl-btn zoom-out-btn" onclick="zoomOut()" title="缩小视图">
+                    <span class="btn-icon">🔍</span>
+                    <span class="btn-text">缩小</span>
+                </button>
+                <button class="ctrl-btn zoom-reset-btn" onclick="resetZoom()" title="重置缩放">
+                    <span class="btn-icon">🎯</span>
+                    <span class="btn-text">重置</span>
+                </button>
+            </div>
         </div>
-        <div class="control-group">
-            <h4>缩放设置</h4>
+        
+        <div class="control-section">
+            <div class="section-header">
+                <h4>⚙️ 缩放设置</h4>
+                <div class="zoom-step-display">步长: <span id="zoomStepValue">1.4</span>x</div>
+            </div>
             <div class="zoom-step-control">
-                <label for="zoomStepSlider">缩放倍率: <span id="zoomStepValue">1.4</span>x</label>
                 <input type="range" id="zoomStepSlider" min="1.1" max="2.0" step="0.1" value="1.4" 
                        onchange="updateZoomStep(this.value)" oninput="updateZoomStepDisplay(this.value)">
                 <div class="zoom-step-presets">
-                    <button class="preset-btn" onclick="setZoomStep(1.2)">1.2x</button>
-                    <button class="preset-btn" onclick="setZoomStep(1.4)">1.4x</button>
-                    <button class="preset-btn" onclick="setZoomStep(1.6)">1.6x</button>
-                    <button class="preset-btn" onclick="setZoomStep(1.8)">1.8x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.2)" title="慢速缩放">1.2x</button>
+                    <button class="preset-btn active" onclick="setZoomStep(1.4)" title="标准缩放">1.4x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.6)" title="快速缩放">1.6x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.8)" title="极速缩放">1.8x</button>
                 </div>
             </div>
         </div>
-        <div class="control-group">
-            <h4>编辑操作</h4>
-            <button class="auto-detect" onclick="autoDetectCorners()">🤖 自动检测角点</button>
-            <button class="reset" onclick="resetPoints()">重置四角点</button>
-            <button class="zoom-btn" onclick="showPreview()" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white;">裁剪预览</button>
-            <button class="crop" onclick="cropImage()">确认裁剪并移至已处理</button>
+        
+        <div class="control-section">
+            <div class="section-header">
+                <h4>✏️ 编辑操作</h4>
+                <div class="edit-status-mini" id="editStatusMini">准备就绪</div>
+            </div>
+            <div class="control-buttons">
+                <button class="ctrl-btn auto-detect-btn" onclick="autoDetectCorners()" title="智能检测PPT角点">
+                    <span class="btn-icon">🤖</span>
+                    <span class="btn-text">自动检测</span>
+                </button>
+                <button class="ctrl-btn reset-btn" onclick="resetPoints()" title="重置角点为默认位置">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">重置角点</span>
+                </button>
+                <button class="ctrl-btn preview-btn" onclick="showPreview()" title="预览裁剪效果">
+                    <span class="btn-icon">👁️</span>
+                    <span class="btn-text">预览</span>
+                </button>
+                <button class="ctrl-btn crop-btn" onclick="cropImage()" title="执行裁剪并保存">
+                    <span class="btn-icon">✂️</span>
+                    <span class="btn-text">确认裁剪</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="control-section tips-section">
+            <div class="section-header">
+                <h4>💡 操作提示</h4>
+                <div class="tips-toggle" onclick="toggleTips()">展开</div>
+            </div>
+            <div class="tips-content" id="tipsContent">
+                <div class="tip-item">
+                    <span class="tip-icon">🎯</span>
+                    <span class="tip-text">红色圆点：拖拽角点精确定位</span>
+                </div>
+                <div class="tip-item">
+                    <span class="tip-icon">💎</span>
+                    <span class="tip-text">蓝色菱形：拖拽边线平行移动</span>
+                </div>
+                <div class="tip-item">
+                    <span class="tip-icon">🖱️</span>
+                    <span class="tip-text">滚轮缩放：以鼠标为中心缩放</span>
+                </div>
+                <div class="tip-item">
+                    <span class="tip-icon">👆</span>
+                    <span class="tip-text">空白拖拽：平移画布查看全图</span>
+                </div>
+            </div>
+            
+            <div class="detailed-instructions" id="detailedInstructions">
+                <h4 style="margin: 15px 0 10px 0; color: #2c3e50; font-size: 14px;">📖 详细操作说明</h4>
+                <div class="instruction-list">
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🤖</span>
+                        <div class="instruction-content">
+                            <strong>自动检测角点</strong>：智能识别PPT的四个角点，基于边缘检测和轮廓分析
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🔴</span>
+                        <div class="instruction-content">
+                            <strong>红色圆点（1,2,3,4）</strong>：四个角点，可自由拖拽调整位置
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🔷</span>
+                        <div class="instruction-content">
+                            <strong>蓝色菱形（上/右/下/左）</strong>：边的中点控制器，可沿垂直于边的方向拖动，实现整条边的平行移动
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🟢</span>
+                        <div class="instruction-content">
+                            <strong>绿色线条和半透明区域</strong>：裁剪区域边界和预览
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🔍</span>
+                        <div class="instruction-content">
+                            <strong>瞄准镜放大镜</strong>：拖拽角点时自动显示高倍放大窗口，帮助精确定位
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">⚙️</span>
+                        <div class="instruction-content">
+                            <strong>缩放控制</strong>：使用放大/缩小按钮或<strong>鼠标滚轮</strong>调整图片显示大小，便于精确操作
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🖐️</span>
+                        <div class="instruction-content">
+                            <strong>画布平移</strong>：在空白区域拖拽可平移画布，用于查看和调整移出视口的角点
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🎯</span>
+                        <div class="instruction-content">
+                            <strong>智能缩放</strong>：鼠标滚轮缩放时会以鼠标位置为中心进行缩放，按钮缩放以画布中心为基准
+                        </div>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">💡</span>
+                        <div class="instruction-content">
+                            <strong>操作技巧</strong>：推荐先点击"自动检测角点"，然后根据需要手动微调，最后用边控制器进行精确调整
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div id="status"></div>
@@ -306,42 +411,371 @@ def get_edit_page_styles():
     获取编辑页面的CSS样式
     """
     return """
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; }
         canvas { 
-            border: 3px solid #ccc; 
+            border: 3px solid #dee2e6; 
             cursor: crosshair; 
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             background-color: white;
         }
-        .controls { 
-            margin: 20px 0; 
-            text-align: center;
+        
+        /* 全新的控制面板样式 */
+        .controls-panel {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
         }
-        .control-group {
-            display: inline-block;
-            margin: 10px 20px;
-            vertical-align: top;
-        }
-        .control-group h4 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-            font-size: 14px;
-        }
-        button { 
-            padding: 12px 24px; 
-            margin: 4px; 
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
+        
+        .control-section {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
         }
-        .zoom-btn {
-            padding: 8px 16px;
-            font-size: 14px;
-            min-width: 60px;
+        
+        .control-section:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
         }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+        
+        .section-header h4 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .zoom-level-display, .zoom-step-display, .edit-status-mini {
+            font-size: 12px;
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .zoom-level-display {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1565c0;
+        }
+        
+        .zoom-step-display {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #7b1fa2;
+        }
+        
+        .edit-status-mini {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            color: #2e7d32;
+        }
+        
+        .control-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+        }
+        
+        .ctrl-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #495057;
+            min-height: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ctrl-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .ctrl-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-icon {
+            font-size: 18px;
+            margin-bottom: 4px;
+            display: block;
+            color: #6c757d;
+        }
+        
+        .btn-text {
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.2;
+            color: #343a40;
+        }
+        
+        /* 按钮特定颜色 */
+        .zoom-in-btn:hover {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-color: #2196f3;
+        }
+        
+        .zoom-in-btn:hover .btn-icon,
+        .zoom-in-btn:hover .btn-text {
+            color: #1565c0;
+        }
+        
+        .zoom-out-btn:hover {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border-color: #9c27b0;
+        }
+        
+        .zoom-out-btn:hover .btn-icon,
+        .zoom-out-btn:hover .btn-text {
+            color: #7b1fa2;
+        }
+        
+        .zoom-reset-btn:hover {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-color: #ff9800;
+        }
+        
+        .zoom-reset-btn:hover .btn-icon,
+        .zoom-reset-btn:hover .btn-text {
+            color: #f57c00;
+        }
+        
+        .auto-detect-btn:hover {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            border-color: #4caf50;
+        }
+        
+        .auto-detect-btn:hover .btn-icon,
+        .auto-detect-btn:hover .btn-text {
+            color: #2e7d32;
+        }
+        
+        .reset-btn:hover {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border-color: #f44336;
+        }
+        
+        .reset-btn:hover .btn-icon,
+        .reset-btn:hover .btn-text {
+            color: #c62828;
+        }
+        
+        .preview-btn:hover {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+            border-color: #ffc107;
+        }
+        
+        .preview-btn:hover .btn-icon,
+        .preview-btn:hover .btn-text {
+            color: #f9a825;
+        }
+        
+        .crop-btn:hover {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-color: #009688;
+        }
+        
+        .crop-btn:hover .btn-icon,
+        .crop-btn:hover .btn-text {
+            color: #00695c;
+        }
+        
+        /* 缩放设置区域样式 */
+        .zoom-step-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #zoomStepSlider {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(to right, #e9ecef, #dee2e6);
+            outline: none;
+            border-radius: 3px;
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+        
+        #zoomStepSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #zoomStepSlider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .zoom-step-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+        }
+        
+        .preset-btn {
+            padding: 6px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .preset-btn:hover {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            transform: translateY(-1px);
+        }
+        
+        .preset-btn.active {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        /* 提示区域样式 */
+        .tips-section {
+            grid-column: 1 / -1; /* 占满整行 */
+        }
+        
+        .tips-toggle {
+            font-size: 12px;
+            color: #3498db;
+            cursor: pointer;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+        
+        .tips-toggle:hover {
+            background: #e3f2fd;
+        }
+        
+        .tips-content {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .tips-content.show {
+            display: grid;
+        }
+        
+        .tip-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+        
+        .tip-icon {
+            font-size: 14px;
+            min-width: 16px;
+        }
+        
+        .tip-text {
+            font-size: 12px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        /* 详细说明样式 */
+        .detailed-instructions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .instruction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .instruction-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #17a2b8;
+            transition: all 0.2s ease;
+        }
+        
+        .instruction-item:hover {
+            background: #e9ecef;
+            transform: translateX(2px);
+        }
+        
+        .instruction-icon {
+            font-size: 16px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .instruction-content {
+            flex: 1;
+            font-size: 13px;
+            color: #495057;
+            line-height: 1.4;
+        }
+        
+        .instruction-content strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
         .back-link { 
             margin: 20px 0; 
             font-size: 16px;
@@ -382,54 +816,6 @@ def get_edit_page_styles():
         .instructions li {
             margin: 8px 0;
             line-height: 1.5;
-        }
-        .auto-detect {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            color: white;
-        }
-        .auto-detect:hover {
-            background: linear-gradient(135deg, #8e44ad, #7d3c98);
-            transform: translateY(-2px);
-        }
-        .reset { 
-            background: linear-gradient(135deg, #e74c3c, #c0392b); 
-            color: white;
-        }
-        .reset:hover { 
-            background: linear-gradient(135deg, #c0392b, #a93226); 
-            transform: translateY(-2px);
-        }
-        .crop { 
-            background: linear-gradient(135deg, #27ae60, #229954); 
-            color: white;
-        }
-        .crop:hover { 
-            background: linear-gradient(135deg, #229954, #1e8449); 
-            transform: translateY(-2px);
-        }
-        .zoom-in {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-        }
-        .zoom-in:hover {
-            background: linear-gradient(135deg, #2980b9, #1f618d);
-            transform: translateY(-2px);
-        }
-        .zoom-out {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-            color: white;
-        }
-        .zoom-out:hover {
-            background: linear-gradient(135deg, #8e44ad, #7d3c98);
-            transform: translateY(-2px);
-        }
-        .zoom-reset {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-        }
-        .zoom-reset:hover {
-            background: linear-gradient(135deg, #e67e22, #d35400);
-            transform: translateY(-2px);
         }
         #status {
             margin: 20px 0;
@@ -503,76 +889,6 @@ def get_edit_page_styles():
             bottom: 8px;
             width: 1px;
             margin-left: -0.5px;
-        }
-        
-        /* 缩放设置控件样式 */
-        .zoom-step-control {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .zoom-step-control label {
-            font-size: 14px;
-            color: #495057;
-            font-weight: bold;
-        }
-        
-        #zoomStepSlider {
-            width: 120px;
-            height: 6px;
-            background: #ddd;
-            outline: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        
-        #zoomStepSlider::-webkit-slider-thumb {
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #3498db;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        
-        #zoomStepSlider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #3498db;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-        
-        .zoom-step-presets {
-            display: flex;
-            gap: 4px;
-        }
-        
-        .preset-btn {
-            padding: 4px 8px;
-            font-size: 12px;
-            background: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .preset-btn:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
-        }
-        
-        .preset-btn.active {
-            background: #3498db;
         }
         
         /* 预览模态框样式 */
@@ -873,7 +1189,13 @@ def get_edit_page_javascript(filename):
             offsetX = canvasCenterX - (img.width * scale) / 2 + panOffsetX;
             offsetY = canvasCenterY - (img.height * scale) / 2 + panOffsetY;
             
-            document.getElementById('zoomLevel').textContent = Math.round(zoomFactor * 100) + '%';
+            // 更新缩放显示（包括画布角落和控制面板）
+            const zoomLevel = Math.round(zoomFactor * 100) + '%';
+            document.getElementById('zoomLevel').textContent = zoomLevel;
+            const panelDisplay = document.getElementById('zoomLevelInPanel');
+            if (panelDisplay) {{
+                panelDisplay.textContent = zoomLevel;
+            }}
         }}
         
         function adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY) {{
@@ -1822,4 +2144,59 @@ def get_edit_page_javascript(filename):
                     '<p style="color: red;">✗ 网络错误：' + error + '</p>';
             }});
         }}
+        
+        // 新增：提示区域切换功能
+        function toggleTips() {{
+            const tipsContent = document.getElementById('tipsContent');
+            const detailedInstructions = document.getElementById('detailedInstructions');
+            const tipsToggle = document.querySelector('.tips-toggle');
+            
+            if (tipsContent.classList.contains('show')) {{
+                tipsContent.classList.remove('show');
+                detailedInstructions.style.display = 'none';
+                tipsToggle.textContent = '展开';
+            }} else {{
+                tipsContent.classList.add('show');
+                detailedInstructions.style.display = 'block';
+                tipsToggle.textContent = '收起';
+            }}
+        }}
+        
+        // 新增：更新编辑状态显示
+        function updateEditStatus(status, color = '#2e7d32') {{
+            const editStatusMini = document.getElementById('editStatusMini');
+            if (editStatusMini) {{
+                editStatusMini.textContent = status;
+                editStatusMini.style.color = color;
+            }}
+        }}
+        
+        // 重写原有函数以添加状态更新
+        const originalAutoDetectCorners = autoDetectCorners;
+        autoDetectCorners = function() {{
+            updateEditStatus('检测中...', '#1565c0');
+            return originalAutoDetectCorners.apply(this, arguments);
+        }}
+        
+        const originalCropImage = cropImage;
+        cropImage = function() {{
+            updateEditStatus('裁剪中...', '#f57c00');
+            return originalCropImage.apply(this, arguments);
+        }}
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {{
+            // 默认收起提示区域
+            const tipsContent = document.getElementById('tipsContent');
+            const detailedInstructions = document.getElementById('detailedInstructions');
+            if (tipsContent) {{
+                tipsContent.classList.remove('show');
+            }}
+            if (detailedInstructions) {{
+                detailedInstructions.style.display = 'none';
+            }}
+            
+            // 初始化状态显示
+            updateEditStatus('准备就绪');
+        }});
     """
