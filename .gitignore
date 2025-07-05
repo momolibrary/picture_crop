@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+venv/
+output_images/
+processed_images/
+source_images/
+tbd/
+test_image.html
+test_preview_feature.html
+*.jpg
