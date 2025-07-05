@@ -225,6 +225,20 @@ def generate_edit_html(filename):
             <button class="zoom-reset zoom-btn" onclick="resetZoom()">重置</button>
         </div>
         <div class="control-group">
+            <h4>缩放设置</h4>
+            <div class="zoom-step-control">
+                <label for="zoomStepSlider">缩放倍率: <span id="zoomStepValue">1.4</span>x</label>
+                <input type="range" id="zoomStepSlider" min="1.1" max="2.0" step="0.1" value="1.4" 
+                       onchange="updateZoomStep(this.value)" oninput="updateZoomStepDisplay(this.value)">
+                <div class="zoom-step-presets">
+                    <button class="preset-btn" onclick="setZoomStep(1.2)">1.2x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.4)">1.4x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.6)">1.6x</button>
+                    <button class="preset-btn" onclick="setZoomStep(1.8)">1.8x</button>
+                </div>
+            </div>
+        </div>
+        <div class="control-group">
             <h4>编辑操作</h4>
             <button class="auto-detect" onclick="autoDetectCorners()">🤖 自动检测角点</button>
             <button class="reset" onclick="resetPoints()">重置四角点</button>
@@ -491,6 +505,76 @@ def get_edit_page_styles():
             margin-left: -0.5px;
         }
         
+        /* 缩放设置控件样式 */
+        .zoom-step-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .zoom-step-control label {
+            font-size: 14px;
+            color: #495057;
+            font-weight: bold;
+        }
+        
+        #zoomStepSlider {
+            width: 120px;
+            height: 6px;
+            background: #ddd;
+            outline: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        #zoomStepSlider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        #zoomStepSlider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .zoom-step-presets {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .preset-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .preset-btn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        
+        .preset-btn.active {
+            background: #3498db;
+        }
+        
         /* 预览模态框样式 */
         .preview-modal {
             display: none;
@@ -614,6 +698,9 @@ def get_edit_page_javascript(filename):
         const CORNER_POINT = 'corner';
         const EDGE_POINT = 'edge';
         
+        // 缩放步长设置（可自定义，默认1.4）
+        let zoomStep = parseFloat(localStorage.getItem('zoomStep')) || 1.4;
+        
         // 初始化四角点（顺序：左上、右上、右下、左下）
         let cornerPoints = [];
         let edgePoints = [];  // 边的中点
@@ -718,6 +805,56 @@ def get_edit_page_javascript(filename):
             }}
         }}, 1000);
         
+        // 初始化缩放步长控件
+        initializeZoomStepControls();
+        
+        function initializeZoomStepControls() {{
+            const slider = document.getElementById('zoomStepSlider');
+            const valueDisplay = document.getElementById('zoomStepValue');
+            
+            // 设置初始值
+            slider.value = zoomStep;
+            valueDisplay.textContent = zoomStep.toFixed(1);
+            
+            // 高亮当前设置的预设按钮
+            updatePresetButtons();
+        }}
+        
+        function updateZoomStepDisplay(value) {{
+            document.getElementById('zoomStepValue').textContent = parseFloat(value).toFixed(1);
+        }}
+        
+        function updateZoomStep(value) {{
+            zoomStep = parseFloat(value);
+            localStorage.setItem('zoomStep', zoomStep.toString());
+            updateZoomStepDisplay(value);
+            updatePresetButtons();
+            console.log('缩放步长已更新为:', zoomStep);
+        }}
+        
+        function setZoomStep(value) {{
+            zoomStep = value;
+            localStorage.setItem('zoomStep', zoomStep.toString());
+            
+            const slider = document.getElementById('zoomStepSlider');
+            slider.value = value;
+            updateZoomStepDisplay(value);
+            updatePresetButtons();
+            console.log('缩放步长已设置为:', zoomStep);
+        }}
+        
+        function updatePresetButtons() {{
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            presetButtons.forEach(btn => {{
+                const btnValue = parseFloat(btn.textContent);
+                if (Math.abs(btnValue - zoomStep) < 0.05) {{
+                    btn.classList.add('active');
+                }} else {{
+                    btn.classList.remove('active');
+                }}
+            }});
+        }}
+        
         function updateScale() {{
             const oldScale = scale;
             const oldOffsetX = offsetX;
@@ -769,11 +906,11 @@ def get_edit_page_javascript(filename):
         }}
         
         function zoomIn() {{
-            zoomAtCenter(zoomFactor * 1.25);
+            zoomAtCenter(zoomFactor * zoomStep);
         }}
         
         function zoomOut() {{
-            zoomAtCenter(zoomFactor / 1.25);
+            zoomAtCenter(zoomFactor / zoomStep);
         }}
         
         function resetZoom() {{
@@ -1346,7 +1483,7 @@ def get_edit_page_javascript(filename):
             
             // 计算缩放方向和幅度（修正方向：向下滚动放大，向上滚动缩小）
             const delta = e.deltaY < 0 ? 1 : -1; // 修正：deltaY < 0 表示向上滚动（缩小），deltaY > 0 表示向下滚动（放大）
-            const zoomStep = 1.3; // 增加缩放步长，提供更明显的缩放效果
+            // 使用用户设置的缩放步长
             const newZoomFactor = delta > 0 ? 
                 Math.min(oldZoomFactor * zoomStep, 5) : 
                 Math.max(oldZoomFactor / zoomStep, 0.2);
