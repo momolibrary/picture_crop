@@ -856,10 +856,6 @@ def get_edit_page_javascript(filename):
         }}
         
         function updateScale() {{
-            const oldScale = scale;
-            const oldOffsetX = offsetX;
-            const oldOffsetY = offsetY;
-            
             scale = baseScale * zoomFactor;
             const scaledWidth = img.width * scale;
             const scaledHeight = img.height * scale;
@@ -873,20 +869,11 @@ def get_edit_page_javascript(filename):
             const canvasCenterX = canvas.width / 2;
             const canvasCenterY = canvas.height / 2;
             
-            // 计算图片在基础缩放下的中心点
-            const baseCenterX = baseOffsetX + (img.width * baseScale) / 2;
-            const baseCenterY = baseOffsetY + (img.height * baseScale) / 2;
-            
             // 缩放后的图片中心点应该保持在canvas中心
             offsetX = canvasCenterX - (img.width * scale) / 2 + panOffsetX;
             offsetY = canvasCenterY - (img.height * scale) / 2 + panOffsetY;
             
             document.getElementById('zoomLevel').textContent = Math.round(zoomFactor * 100) + '%';
-            
-            // 如果已有角点且缩放发生了变化，调整角点位置
-            if (cornerPoints.length === 4 && oldScale !== 0 && oldScale !== scale) {{
-                adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY);
-            }}
         }}
         
         function adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY) {{
@@ -914,21 +901,35 @@ def get_edit_page_javascript(filename):
         }}
         
         function resetZoom() {{
-            zoomFactor = 1;
-            panOffsetX = 0;
-            panOffsetY = 0;
-            
             const oldScale = scale;
             const oldOffsetX = offsetX;
             const oldOffsetY = offsetY;
             
-            updateScale();
+            zoomFactor = 1;
+            panOffsetX = 0;
+            panOffsetY = 0;
             
-            // 同步调整角点位置
-            if (cornerPoints && cornerPoints.length === 4 && oldScale !== 0 && oldScale !== scale) {{
-                adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY);
+            // 计算新的scale和offset值
+            const newScale = baseScale * zoomFactor;
+            const canvasCenterX = canvas.width / 2;
+            const canvasCenterY = canvas.height / 2;
+            const newOffsetX = canvasCenterX - (img.width * newScale) / 2;
+            const newOffsetY = canvasCenterY - (img.height * newScale) / 2;
+            
+            // 先调整角点位置
+            if (cornerPoints && cornerPoints.length === 4 && oldScale !== 0) {{
+                for (let i = 0; i < cornerPoints.length; i++) {{
+                    // 转换为图片坐标（相对于图片左上角的坐标）
+                    const imgX = (cornerPoints[i][0] - oldOffsetX) / oldScale;
+                    const imgY = (cornerPoints[i][1] - oldOffsetY) / oldScale;
+                    
+                    // 转换为新的屏幕坐标
+                    cornerPoints[i][0] = imgX * newScale + newOffsetX;
+                    cornerPoints[i][1] = imgY * newScale + newOffsetY;
+                }}
             }}
             
+            updateScale();
             updateEdgePoints();
             draw();
         }}
@@ -1499,15 +1500,15 @@ def get_edit_page_javascript(filename):
             
             // 更新缩放因子和缩放值
             zoomFactor = newZoomFactor;
-            scale = baseScale * zoomFactor;
+            const newScale = baseScale * zoomFactor;
             
             // 计算新的图片尺寸
-            const newScaledWidth = img.width * scale;
-            const newScaledHeight = img.height * scale;
+            const newScaledWidth = img.width * newScale;
+            const newScaledHeight = img.height * newScale;
             
             // 计算鼠标在新缩放下的图片坐标
-            const newImageMouseX = imgMouseX * scale;
-            const newImageMouseY = imgMouseY * scale;
+            const newImageMouseX = imgMouseX * newScale;
+            const newImageMouseY = imgMouseY * newScale;
             
             // 计算新的偏移，保持鼠标位置在图片上的相对位置不变
             const newOffsetX = mouseX - newImageMouseX;
@@ -1521,13 +1522,21 @@ def get_edit_page_javascript(filename):
             panOffsetX = newOffsetX - baseCenterOffsetX;
             panOffsetY = newOffsetY - baseCenterOffsetY;
             
+            // 先调整角点位置
+            if (cornerPoints && cornerPoints.length === 4 && oldScale !== 0) {{
+                for (let i = 0; i < cornerPoints.length; i++) {{
+                    // 转换为图片坐标（相对于图片左上角的坐标）
+                    const imgX = (cornerPoints[i][0] - oldOffsetX) / oldScale;
+                    const imgY = (cornerPoints[i][1] - oldOffsetY) / oldScale;
+                    
+                    // 转换为新的屏幕坐标
+                    cornerPoints[i][0] = imgX * newScale + newOffsetX;
+                    cornerPoints[i][1] = imgY * newScale + newOffsetY;
+                }}
+            }}
+            
             // 更新所有坐标系统
             updateScale();
-            
-            // 同步调整角点位置
-            if (cornerPoints && cornerPoints.length === 4 && oldScale !== scale) {{
-                adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY);
-            }}
             
             updateEdgePoints();
             draw();
@@ -1543,13 +1552,49 @@ def get_edit_page_javascript(filename):
             const oldOffsetX = offsetX;
             const oldOffsetY = offsetY;
             
-            zoomFactor = newZoomFactor;
-            updateScale();
+            // 计算canvas中心点
+            const canvasCenterX = canvas.width / 2;
+            const canvasCenterY = canvas.height / 2;
             
-            // 同步调整角点位置
-            if (cornerPoints && cornerPoints.length === 4 && oldScale !== 0 && oldScale !== scale) {{
-                adjustPointsForScale(oldScale, oldOffsetX, oldOffsetY);
+            // 计算当前缩放下，canvas中心点在图片上的坐标
+            const imgCenterX = (canvasCenterX - oldOffsetX) / oldScale;
+            const imgCenterY = (canvasCenterY - oldOffsetY) / oldScale;
+            
+            // 更新缩放因子
+            zoomFactor = newZoomFactor;
+            const newScale = baseScale * zoomFactor;
+            
+            // 计算新缩放下，要保持canvas中心对应图片相同位置所需的偏移
+            const newScaledWidth = img.width * newScale;
+            const newScaledHeight = img.height * newScale;
+            
+            // 计算新的偏移，保持canvas中心在图片上的位置不变
+            const newOffsetX = canvasCenterX - imgCenterX * newScale;
+            const newOffsetY = canvasCenterY - imgCenterY * newScale;
+            
+            // 计算基础居中偏移
+            const baseCenterOffsetX = (canvas.width - newScaledWidth) / 2;
+            const baseCenterOffsetY = (canvas.height - newScaledHeight) / 2;
+            
+            // 更新panOffset
+            panOffsetX = newOffsetX - baseCenterOffsetX;
+            panOffsetY = newOffsetY - baseCenterOffsetY;
+            
+            // 先调整角点位置（使用旧的scale和offset值）
+            if (cornerPoints && cornerPoints.length === 4 && oldScale !== 0) {{
+                for (let i = 0; i < cornerPoints.length; i++) {{
+                    // 转换为图片坐标（相对于图片左上角的坐标）
+                    const imgX = (cornerPoints[i][0] - oldOffsetX) / oldScale;
+                    const imgY = (cornerPoints[i][1] - oldOffsetY) / oldScale;
+                    
+                    // 转换为新的屏幕坐标
+                    cornerPoints[i][0] = imgX * newScale + newOffsetX;
+                    cornerPoints[i][1] = imgY * newScale + newOffsetY;
+                }}
             }}
+            
+            // 更新scale和offset
+            updateScale();
             
             updateEdgePoints();
             draw();
