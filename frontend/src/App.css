@@ -906,7 +906,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   width: 90vw;
   max-width: 900px;
-  max-height: 90vh;
+  max-height: 95vh; /* 增加最大高度，减少被截断的可能性 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -963,13 +963,14 @@
 }
 
 .modal-body {
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* 改为flex-start，避免垂直居中导致内容被截断 */
+  min-height: 0; /* 确保flex容器能正确计算高度 */
 }
 
 .processing-state {
@@ -1030,13 +1031,20 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  gap: 2rem;
+  gap: 1.5rem;
+  max-height: 100%; /* 确保不超出容器高度 */
 }
 
 .preview-content img {
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  min-height: 200px; /* 设置最小高度，确保图片不会太小 */
+  max-width: 100%;
+  max-height: calc(70vh - 200px); /* 与组件内联样式保持一致 */
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 .preview-content img:hover {
@@ -1178,7 +1186,10 @@
   
   .preview-content img {
     max-width: 100%;
+    max-height: calc(60vh - 150px); /* 在移动设备上给更多空间 */
     height: auto;
+    width: auto;
+    object-fit: contain;
   }
 }
 

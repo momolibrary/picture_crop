@@ -280,10 +280,13 @@ export function PreviewModal({
                 alt="预览图片"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '60vh',
+                  maxHeight: 'calc(70vh - 200px)', // 减去header和footer的高度，给更多空间
+                  width: 'auto',
+                  height: 'auto',
                   objectFit: 'contain',
                   border: '1px solid #e9ecef',
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  display: 'block'
                 }}
               />
               
