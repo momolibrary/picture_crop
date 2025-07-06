@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { ZoomIn, ZoomOut, RotateCcw, Grid3X3 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import { loadImage, drawCropArea } from '../utils/imageProcessing';
@@ -10,7 +11,15 @@ interface CanvasProps {
 
 export function Canvas({ className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { currentImage, viewState, updateImage } = useAppStore();
+  const { 
+    currentImage, 
+    viewState, 
+    settings,
+    updateImage, 
+    setZoom, 
+    resetView,
+    updateSettings
+  } = useAppStore();
   
   useCanvasInteraction(canvasRef);
 
@@ -145,12 +154,64 @@ export function Canvas({ className }: CanvasProps) {
         }}
       />
       
-      {/* Zoom controls */}
+      {/* Canvas Controls */}
       <div className="canvas-controls">
-        <div className="zoom-info">
-          {Math.round(viewState.zoom * 100)}%
+        <div className="control-group">
+          <button
+            className="control-btn"
+            onClick={() => setZoom(Math.min(5, viewState.zoom + 0.25))}
+            title="Zoom In"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <div className="zoom-info">
+            {Math.round(viewState.zoom * 100)}%
+          </div>
+          <button
+            className="control-btn"
+            onClick={() => setZoom(Math.max(0.1, viewState.zoom - 0.25))}
+            title="Zoom Out"
+          >
+            <ZoomOut size={16} />
+          </button>
+        </div>
+        
+        <div className="control-group">
+          <button
+            className="control-btn"
+            onClick={resetView}
+            title="Reset View"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
+        
+        <div className="control-group">
+          <button
+            className={`control-btn ${settings.showGrid ? 'active' : ''}`}
+            onClick={() => updateSettings({ showGrid: !settings.showGrid })}
+            title="Toggle Grid"
+          >
+            <Grid3X3 size={16} />
+          </button>
         </div>
       </div>
+      
+      {/* Corner Position Info */}
+      {viewState.selectedCorner !== null && currentImage?.cropArea && (
+        <div className="corner-info">
+          <div className="info-item">
+            <span>Corner {viewState.selectedCorner + 1}</span>
+            <span>
+              {(() => {
+                const corners = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] as const;
+                const corner = currentImage.cropArea[corners[viewState.selectedCorner]];
+                return `(${Math.round(corner.x)}, ${Math.round(corner.y)})`;
+              })()}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

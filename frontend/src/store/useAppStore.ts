@@ -1,10 +1,19 @@
 import { create } from 'zustand';
 import type { Point, ProcessedImage, AppSettings, ViewState } from '../types';
+import { apiService, type FileListResponse, type PaginatedFileListResponse } from '../services/api';
 
 interface AppState {
   // Current image state
   currentImage: ProcessedImage | null;
-  images: ProcessedImage[];
+  images: ProcessedImage[]; // Pending images from source_images
+  processedImages: ProcessedImage[]; // Completed images from processed folder
+  
+  // Server state
+  serverImages: FileListResponse | null;
+  paginatedData: PaginatedFileListResponse | null;
+  currentPage: number;
+  pageSize: number;
+  lastRefresh: number | null;
   
   // View and interaction state
   viewState: ViewState;
@@ -19,6 +28,11 @@ interface AppState {
   addImage: (image: ProcessedImage) => void;
   removeImage: (id: string) => void;
   updateImage: (id: string, updates: Partial<ProcessedImage>) => void;
+  
+  // Server actions
+  refreshFromServer: () => Promise<void>;
+  loadPage: (page: number) => Promise<void>;
+  loadImageFromServer: (filename: string) => Promise<void>;
   
   // View actions
   setZoom: (zoom: number) => void;
@@ -54,9 +68,15 @@ const defaultSettings: AppSettings = {
   snapToGrid: false,
 };
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   currentImage: null,
   images: [],
+  processedImages: [],
+  serverImages: null,
+  paginatedData: null,
+  currentPage: 1,
+  pageSize: 20,
+  lastRefresh: null,
   viewState: defaultViewState,
   settings: defaultSettings,
   isLoading: false,
@@ -82,6 +102,110 @@ export const useAppStore = create<AppState>((set) => ({
       ? { ...state.currentImage, ...updates } 
       : state.currentImage
   })),
+
+  refreshFromServer: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      // 使用分页API加载第一页
+      const paginatedData = await apiService.getFilesPaginated(1, get().pageSize);
+      
+      // Convert pending files to ProcessedImage format with thumbnail URLs
+      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => ({
+        id: fileInfo.filename,
+        originalName: fileInfo.filename,
+        originalUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/image/${encodeURIComponent(fileInfo.filename)}`,
+        thumbnailUrl: fileInfo.has_thumbnail ? 
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${fileInfo.thumbnail_url}` : 
+          undefined,
+        timestamp: Date.now(),
+        status: 'pending' as const
+      }));
+
+      // Convert processed files to ProcessedImage format
+      const completedImages: ProcessedImage[] = paginatedData.processed_files.map(filename => ({
+        id: `processed_${filename}`,
+        originalName: filename,
+        originalUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/image/${encodeURIComponent(filename)}`,
+        thumbnailUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/thumbnail/${encodeURIComponent(filename)}`,
+        timestamp: Date.now(),
+        status: 'completed' as const
+      }));
+
+      set({ 
+        paginatedData, 
+        images: pendingImages, 
+        processedImages: completedImages,
+        currentPage: 1,
+        lastRefresh: Date.now(),
+        isLoading: false 
+      });
+    } catch (error) {
+      console.error('Failed to refresh from server:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to load images from server',
+        isLoading: false 
+      });
+    }
+  },
+
+  loadPage: async (page: number) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const paginatedData = await apiService.getFilesPaginated(page, get().pageSize);
+      
+      // Convert pending files to ProcessedImage format with thumbnail URLs
+      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => ({
+        id: fileInfo.filename,
+        originalName: fileInfo.filename,
+        originalUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/image/${encodeURIComponent(fileInfo.filename)}`,
+        thumbnailUrl: fileInfo.has_thumbnail ? 
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${fileInfo.thumbnail_url}` : 
+          undefined,
+        timestamp: Date.now(),
+        status: 'pending' as const
+      }));
+
+      set({ 
+        paginatedData, 
+        images: pendingImages,
+        currentPage: page,
+        isLoading: false 
+      });
+    } catch (error) {
+      console.error('Failed to load page from server:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to load page',
+        isLoading: false 
+      });
+    }
+  },
+
+  loadImageFromServer: async (filename: string) => {
+    try {
+      const imageUrl = await apiService.getImage(filename);
+      const existingImage = get().images.find(img => img.originalName === filename);
+      
+      if (existingImage) {
+        // Update existing image
+        get().updateImage(existingImage.id, { originalUrl: imageUrl });
+      } else {
+        // Add new image
+        const newImage: ProcessedImage = {
+          id: filename,
+          originalName: filename,
+          originalUrl: imageUrl,
+          timestamp: Date.now(),
+          status: 'pending'
+        };
+        get().addImage(newImage);
+      }
+    } catch (error) {
+      console.error('Failed to load image from server:', error);
+      set({ error: error instanceof Error ? error.message : 'Failed to load image' });
+    }
+  },
 
   setZoom: (zoom) => set((state) => ({
     viewState: { ...state.viewState, zoom }
@@ -115,6 +239,7 @@ export const useAppStore = create<AppState>((set) => ({
   clearAll: () => set({
     currentImage: null,
     images: [],
+    processedImages: [],
     viewState: defaultViewState,
     error: null,
   }),

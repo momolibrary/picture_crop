@@ -4,6 +4,8 @@
 """
 import cv2
 import numpy as np
+import os
+from PIL import Image
 
 
 def order_points(pts):
@@ -400,3 +402,53 @@ def get_smart_default_corners(width, height):
         [width - margin_x, height - margin_y],          # 右下
         [margin_x, height - margin_y]                   # 左下
     ]
+
+
+def generate_thumbnail(image_path, thumbnail_path, max_size=(200, 200), quality=85):
+    """
+    生成图片缩略图
+    
+    Args:
+        image_path: 原始图片路径
+        thumbnail_path: 缩略图保存路径
+        max_size: 最大尺寸 (width, height)
+        quality: JPEG压缩质量 (1-100)
+    
+    Returns:
+        bool: 是否成功生成缩略图
+    """
+    try:
+        with Image.open(image_path) as img:
+            # 转换为RGB模式 (如果是RGBA等)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+            
+            # 计算缩略图尺寸，保持宽高比
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            # 确保目录存在
+            os.makedirs(os.path.dirname(thumbnail_path), exist_ok=True)
+            
+            # 保存缩略图
+            img.save(thumbnail_path, 'JPEG', quality=quality, optimize=True)
+            return True
+    except Exception as e:
+        print(f"生成缩略图失败 {image_path}: {e}")
+        return False
+
+
+def get_thumbnail_path(image_filename, thumbnail_dir="thumbnails"):
+    """
+    获取缩略图路径
+    
+    Args:
+        image_filename: 原始图片文件名
+        thumbnail_dir: 缩略图目录
+    
+    Returns:
+        str: 缩略图路径
+    """
+    # 将原始扩展名替换为.jpg
+    name, _ = os.path.splitext(image_filename)
+    thumbnail_filename = f"{name}_thumb.jpg"
+    return os.path.join(thumbnail_dir, thumbnail_filename)

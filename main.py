@@ -20,7 +20,9 @@ from image_processor import (
     validate_and_correct_points, 
     resize_image_for_preview, 
     encode_image_to_jpeg,
-    auto_detect_corners
+    auto_detect_corners,
+    generate_thumbnail,
+    get_thumbnail_path
 )
 
 # 创建 FastAPI 应用
@@ -43,11 +45,13 @@ app.add_middleware(
 SOURCE_DIR = "source_images"
 OUTPUT_DIR = "output_images"
 PROCESSED_DIR = "processed"
+THUMBNAIL_DIR = "thumbnails"
 
 # 确保目录存在
 os.makedirs(SOURCE_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
+os.makedirs(THUMBNAIL_DIR, exist_ok=True)
 
 # API 数据模型定义
 class ImageInfo(BaseModel):
@@ -57,9 +61,23 @@ class ImageInfo(BaseModel):
     height: int
     file_size: Optional[int] = None
     created_time: Optional[str] = None
+    has_thumbnail: bool = False
+    thumbnail_url: Optional[str] = None
+
+class PaginatedFileListResponse(BaseModel):
+    """分页文件列表响应模型"""
+    pending_files: List[ImageInfo]
+    processed_files: List[str]
+    total_files: int
+    completion_rate: float
+    page: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
 
 class FileListResponse(BaseModel):
-    """文件列表响应模型"""
+    """文件列表响应模型 - 保持向后兼容"""
     pending_files: List[ImageInfo]
     processed_files: List[str]
     total_files: int
@@ -116,12 +134,100 @@ async def health_check():
         }
     }
 
+# 辅助函数
+def generate_thumbnail_if_needed(image_path: str, filename: str) -> tuple[bool, str]:
+    """
+    如果需要，生成缩略图
+    
+    Returns:
+        tuple: (has_thumbnail, thumbnail_url)
+    """
+    thumbnail_path = get_thumbnail_path(filename, THUMBNAIL_DIR)
+    
+    # 检查缩略图是否已存在且比原图新
+    if os.path.exists(thumbnail_path):
+        thumb_mtime = os.path.getmtime(thumbnail_path)
+        img_mtime = os.path.getmtime(image_path)
+        if thumb_mtime >= img_mtime:
+            return True, f"/api/thumbnail/{filename}"
+    
+    # 生成缩略图
+    if generate_thumbnail(image_path, thumbnail_path):
+        return True, f"/api/thumbnail/{filename}"
+    
+    return False, ""
+
 # API 实现部分
-@app.get("/api/files", response_model=FileListResponse)
-async def get_files():
-    """获取文件列表 - 替代原来的首页"""
+@app.get("/api/files/paginated", response_model=PaginatedFileListResponse)
+async def get_files_paginated(page: int = 1, page_size: int = 20):
+    """获取分页文件列表 - 优化性能的新接口"""
     try:
         # 获取待处理文件
+        all_files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        all_files.sort(key=lambda f: os.path.getctime(os.path.join(SOURCE_DIR, f)), reverse=True)
+        
+        # 计算分页
+        total_files = len(all_files)
+        total_pages = (total_files + page_size - 1) // page_size
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_files = all_files[start_idx:end_idx]
+        
+        pending_files = []
+        
+        for filename in page_files:
+            path = os.path.join(SOURCE_DIR, filename)
+            if os.path.exists(path):
+                try:
+                    img = cv2.imread(path)
+                    if img is not None:
+                        height, width = img.shape[:2]
+                        file_size = os.path.getsize(path)
+                        created_time = time.ctime(os.path.getctime(path))
+                        
+                        # 生成缩略图
+                        has_thumbnail, thumbnail_url = generate_thumbnail_if_needed(path, filename)
+                        
+                        pending_files.append(ImageInfo(
+                            filename=filename,
+                            width=int(width),
+                            height=int(height),
+                            file_size=file_size,
+                            created_time=created_time,
+                            has_thumbnail=has_thumbnail,
+                            thumbnail_url=thumbnail_url
+                        ))
+                except Exception as e:
+                    print(f"Error processing file {filename}: {e}")
+                    continue
+        
+        # 获取已处理文件
+        processed_files = [f for f in os.listdir(PROCESSED_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        
+        # 计算统计信息
+        total_all_files = len(all_files) + len(processed_files)
+        completion_rate = (len(processed_files) / total_all_files * 100) if total_all_files > 0 else 100
+        
+        return PaginatedFileListResponse(
+            pending_files=pending_files,
+            processed_files=processed_files,
+            total_files=total_all_files,
+            completion_rate=completion_rate,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            has_next=page < total_pages,
+            has_prev=page > 1
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+
+@app.get("/api/files", response_model=FileListResponse)
+async def get_files():
+    """获取文件列表 - 兼容旧接口，但优化为只返回文件名"""
+    try:
+        # 获取待处理文件（只获取基本信息，不生成缩略图）
         files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
         pending_files = []
         
@@ -129,6 +235,7 @@ async def get_files():
             path = os.path.join(SOURCE_DIR, filename)
             if os.path.exists(path):
                 try:
+                    # 使用更快的方法获取图片尺寸
                     img = cv2.imread(path)
                     if img is not None:
                         height, width = img.shape[:2]
@@ -140,7 +247,9 @@ async def get_files():
                             width=int(width),
                             height=int(height),
                             file_size=file_size,
-                            created_time=created_time
+                            created_time=created_time,
+                            has_thumbnail=False,
+                            thumbnail_url=None
                         ))
                 except Exception as e:
                     print(f"Error processing file {filename}: {e}")
@@ -162,6 +271,25 @@ async def get_files():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+
+@app.get("/api/thumbnail/{filename}")
+async def get_thumbnail(filename: str):
+    """获取图片缩略图"""
+    thumbnail_path = get_thumbnail_path(filename, THUMBNAIL_DIR)
+    
+    if not os.path.exists(thumbnail_path):
+        # 如果缩略图不存在，尝试生成
+        source_path = os.path.join(SOURCE_DIR, filename)
+        if not os.path.exists(source_path):
+            source_path = os.path.join(PROCESSED_DIR, filename)
+        
+        if os.path.exists(source_path):
+            if not generate_thumbnail(source_path, thumbnail_path):
+                raise HTTPException(status_code=404, detail="无法生成缩略图")
+        else:
+            raise HTTPException(status_code=404, detail="原图文件不存在")
+    
+    return FileResponse(thumbnail_path, media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
 
 
 @app.post("/api/upload")
@@ -199,9 +327,13 @@ async def upload_files(files: List[UploadFile] = File(...)):
 @app.get("/api/image/{filename}")
 async def get_image(filename: str):
     """提供源图片文件访问"""
+    # 首先尝试从源文件夹查找
     path = os.path.join(SOURCE_DIR, filename)
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="图片文件不存在")
+        # 如果源文件夹没有，尝试从处理文件夹查找
+        path = os.path.join(PROCESSED_DIR, filename)
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="图片文件不存在")
     
     # 检测文件类型
     file_extension = filename.lower().split('.')[-1]

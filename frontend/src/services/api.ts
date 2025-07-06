@@ -12,6 +12,20 @@ export interface ImageInfo {
   height: number;
   file_size?: number;
   created_time?: string;
+  has_thumbnail?: boolean;
+  thumbnail_url?: string;
+}
+
+export interface PaginatedFileListResponse {
+  pending_files: ImageInfo[];
+  processed_files: string[];
+  total_files: number;
+  completion_rate: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }
 
 export interface FileListResponse {
@@ -52,6 +66,27 @@ export interface UploadResponse {
   uploaded_files: string[];
   errors: string[];
   success: boolean;
+}
+
+// 处理图片的请求和响应类型
+export interface ProcessImageRequest {
+  imageId: string;
+  cropArea: {
+    topLeft: { x: number; y: number };
+    topRight: { x: number; y: number };
+    bottomRight: { x: number; y: number };
+    bottomLeft: { x: number; y: number };
+  };
+  outputFormat?: string;
+  quality?: number;
+}
+
+export interface ProcessImageResponse {
+  success: boolean;
+  processedImageUrl?: string;
+  filename?: string;
+  message: string;
+  error?: string;
 }
 
 // API 错误处理
@@ -187,6 +222,57 @@ export const apiService = {
   // 健康检查
   async healthCheck(): Promise<{ status: string; timestamp: number; directories: Record<string, boolean> }> {
     return apiRequest('/api/health');
+  },
+
+  // 处理图片（新的统一处理方法）
+  async processImage(request: ProcessImageRequest): Promise<ProcessImageResponse> {
+    const points = [
+      [request.cropArea.topLeft.x, request.cropArea.topLeft.y],
+      [request.cropArea.topRight.x, request.cropArea.topRight.y],
+      [request.cropArea.bottomRight.x, request.cropArea.bottomRight.y],
+      [request.cropArea.bottomLeft.x, request.cropArea.bottomLeft.y],
+    ];
+
+    try {
+      // 假设我们通过imageId可以获取到文件名
+      // 在实际应用中，你可能需要维护一个imageId到filename的映射
+      const filename = request.imageId; 
+      
+      const cropResponse = await this.cropImage(filename, points);
+      
+      if (cropResponse.success && cropResponse.processed_filename) {
+        const processedImageUrl = await this.downloadResult(cropResponse.processed_filename);
+        return {
+          success: true,
+          processedImageUrl,
+          filename: cropResponse.processed_filename,
+          message: 'Image processed successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: cropResponse.message || 'Processing failed',
+          error: cropResponse.error
+        };
+      }
+    } catch (error) {
+      console.error('Process image error:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+
+  // 获取分页文件列表
+  async getFilesPaginated(page = 1, pageSize = 20): Promise<PaginatedFileListResponse> {
+    return apiRequest<PaginatedFileListResponse>(`/api/files/paginated?page=${page}&page_size=${pageSize}`);
+  },
+
+  // 获取缩略图URL
+  getThumbnailUrl(filename: string): string {
+    return `${API_BASE_URL}/api/thumbnail/${encodeURIComponent(filename)}`;
   },
 };
 

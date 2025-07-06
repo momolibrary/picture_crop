@@ -19,6 +19,7 @@ export interface ProcessedImage {
   id: string;
   originalName: string;
   originalUrl: string;
+  thumbnailUrl?: string;
   processedUrl?: string;
   cropArea?: CropArea;
   timestamp: number;
