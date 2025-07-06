@@ -27,7 +27,7 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
     newPoint: Point;
   } | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
-  const THROTTLE_MS = 32; // 限制为30fps，减少闪烁
+  const THROTTLE_MS = 16; // 提高到60fps，减少闪烁
 
   const getCropAreaPoints = useCallback((): Point[] => {
     if (!currentImage?.cropArea) return [];
@@ -45,7 +45,7 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
     const canvas = canvasRef.current;
     const constrainedPoint = constrainPoint(newPoint, canvas.width, canvas.height);
     
-    // 使用更严格的节流控制，减少不必要的状态更新
+    // 使用更高效的批量更新策略
     const now = Date.now();
     
     // 总是存储最新的待更新数据
@@ -69,6 +69,7 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
           [cornerNames[pending.cornerIndex]]: pending.newPoint
         };
 
+        // 批量更新状态，减少重新渲染
         updateImage(currentImage.id, { cropArea: updatedCropArea });
         pendingUpdateRef.current = null;
         lastUpdateTimeRef.current = Date.now();
@@ -152,7 +153,7 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
         Math.pow(canvasPos.x - lastPos.x, 2) + Math.pow(canvasPos.y - lastPos.y, 2)
       );
       
-      if (distance > 1) { // 移动距离阈值，单位为像素
+      if (distance > 0.5) { // 减小移动距离阈值，提高响应性
         updateCropAreaPoint(viewState.selectedCorner, canvasPos);
         lastMousePosRef.current = canvasPos;
       }

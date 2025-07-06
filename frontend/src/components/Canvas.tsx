@@ -13,6 +13,7 @@ export function Canvas({ className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderFrameRef = useRef<number>(0);
   const lastRenderTimeRef = useRef<number>(0);
+  const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
   const { 
     currentImage, 
     viewState, 
@@ -30,24 +31,19 @@ export function Canvas({ className }: CanvasProps) {
     return !!(canvasRef.current && currentImage);
   }, [currentImage]);
 
-  // 节流渲染函数
-  const throttledRender = useMemo(() => {
-    const RENDER_THROTTLE_MS = 32; // 30fps，减少闪烁
+  // 优化的渲染函数，减少拖动时的闪烁
+  const scheduledRender = useMemo(() => {
+    let isScheduled = false;
     
     return (renderFn: () => void) => {
-      const now = Date.now();
-      if (now - lastRenderTimeRef.current < RENDER_THROTTLE_MS) {
-        if (renderFrameRef.current) {
-          cancelAnimationFrame(renderFrameRef.current);
-        }
-        renderFrameRef.current = requestAnimationFrame(() => {
-          renderFn();
-          lastRenderTimeRef.current = Date.now();
-        });
-      } else {
+      if (isScheduled) return;
+      
+      isScheduled = true;
+      renderFrameRef.current = requestAnimationFrame(() => {
         renderFn();
-        lastRenderTimeRef.current = now;
-      }
+        isScheduled = false;
+        lastRenderTimeRef.current = Date.now();
+      });
     };
   }, []);
 
@@ -82,7 +78,7 @@ export function Canvas({ className }: CanvasProps) {
     initializeCropArea();
   }, [currentImage, updateImage]);
 
-  // Render canvas content
+  // Render canvas content with optimized rendering
   useEffect(() => {
     if (!shouldRender) return;
 
@@ -100,7 +96,13 @@ export function Canvas({ className }: CanvasProps) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Load and draw image
-        const img = await loadImage(currentImage!.originalUrl);
+        let img: HTMLImageElement;
+        if (imageCache.current.has(currentImage!.originalUrl)) {
+          img = imageCache.current.get(currentImage!.originalUrl)!;
+        } else {
+          img = await loadImage(currentImage!.originalUrl);
+          imageCache.current.set(currentImage!.originalUrl, img);
+        }
         
         // Calculate image position and size
         const scale = Math.min(
@@ -151,12 +153,14 @@ export function Canvas({ className }: CanvasProps) {
       }
     };
 
-    // 使用节流渲染
-    throttledRender(render);
-  }, [shouldRender, currentImage, viewState, throttledRender]);
+    // 使用优化的渲染调度
+    scheduledRender(render);
+  }, [shouldRender, currentImage, viewState, scheduledRender]);
 
   // Handle window resize to adjust canvas size
   useEffect(() => {
+    const cache = imageCache.current;
+    
     const handleResize = () => {
       if (!canvasRef.current) return;
       
@@ -175,6 +179,8 @@ export function Canvas({ className }: CanvasProps) {
       if (renderFrameRef.current) {
         cancelAnimationFrame(renderFrameRef.current);
       }
+      // 清理图像缓存
+      cache.clear();
     };
   }, []);
 
