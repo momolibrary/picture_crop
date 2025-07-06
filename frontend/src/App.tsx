@@ -2,8 +2,14 @@ import { useAppStore } from './store/useAppStore';
 import { Canvas } from './components/Canvas';
 import { ImageUpload, ImageList } from './components/ImageUpload';
 import { Toolbar } from './components/Toolbar';
+import { DevTools } from './components/DevTools';
 import { useState, useCallback } from 'react';
 import './App.css';
+
+// 导入进度演示工具 (仅在开发环境)
+if (import.meta.env.DEV) {
+  import('./utils/progressDemo');
+}
 
 function App() {
   const { currentImage, error, setError } = useAppStore();
@@ -34,6 +40,7 @@ function App() {
           <aside className="sidebar">
             <ImageUpload className="upload-section" />
             <ImageList className="image-list-section" />
+            <DevTools className="dev-tools-section" />
           </aside>
 
           {/* Main content */}

@@ -4,7 +4,6 @@ import { useAppStore } from '../store/useAppStore';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import { loadImage, drawCropArea } from '../utils/imageProcessing';
 import { createDefaultCropArea } from '../utils/geometry';
-import { calculateImageDisplayInfo } from '../utils/coordinateTransform';
 import { Magnifier } from './Magnifier';
 
 interface CanvasProps {

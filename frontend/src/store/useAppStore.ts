@@ -8,6 +8,10 @@ interface AppState {
   images: ProcessedImage[]; // Pending images from source_images
   processedImages: ProcessedImage[]; // Completed images from processed folder
   
+  // Processing status tracking
+  processingImages: Set<string>; // Filenames currently being processed
+  errorImages: Map<string, string>; // Filename -> error message
+  
   // Server state
   serverImages: FileListResponse | null;
   paginatedData: PaginatedFileListResponse | null;
@@ -48,6 +52,11 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   
+  // Processing status actions
+  setProcessingStatus: (filename: string, status: 'processing' | 'completed' | 'error', errorMessage?: string) => void;
+  clearProcessingStatus: (filename: string) => void;
+  getProcessingStats: () => { processing: number; errors: number; };
+  
   // Reset functions
   resetView: () => void;
   clearAll: () => void;
@@ -76,6 +85,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentImage: null,
   images: [],
   processedImages: [],
+  processingImages: new Set<string>(),
+  errorImages: new Map<string, string>(),
   serverImages: null,
   paginatedData: null,
   currentPage: 1,
@@ -304,12 +315,63 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
 
+  // Processing status management
+  setProcessingStatus: (filename, status, errorMessage) => set((state) => {
+    const newProcessingImages = new Set(state.processingImages);
+    const newErrorImages = new Map(state.errorImages);
+    
+    switch (status) {
+      case 'processing':
+        newProcessingImages.add(filename);
+        newErrorImages.delete(filename);
+        break;
+      case 'completed':
+        newProcessingImages.delete(filename);
+        newErrorImages.delete(filename);
+        break;
+      case 'error':
+        newProcessingImages.delete(filename);
+        if (errorMessage) {
+          newErrorImages.set(filename, errorMessage);
+        }
+        break;
+    }
+    
+    return {
+      processingImages: newProcessingImages,
+      errorImages: newErrorImages
+    };
+  }),
+
+  clearProcessingStatus: (filename) => set((state) => {
+    const newProcessingImages = new Set(state.processingImages);
+    const newErrorImages = new Map(state.errorImages);
+    
+    newProcessingImages.delete(filename);
+    newErrorImages.delete(filename);
+    
+    return {
+      processingImages: newProcessingImages,
+      errorImages: newErrorImages
+    };
+  }),
+
+  getProcessingStats: () => {
+    const state = get();
+    return {
+      processing: state.processingImages.size,
+      errors: state.errorImages.size
+    };
+  },
+
   resetView: () => set({ viewState: defaultViewState }),
   
   clearAll: () => set({
     currentImage: null,
     images: [],
     processedImages: [],
+    processingImages: new Set<string>(),
+    errorImages: new Map<string, string>(),
     viewState: defaultViewState,
     error: null,
   }),

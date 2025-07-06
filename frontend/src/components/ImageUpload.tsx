@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, X, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { isValidImageFile } from '../utils/imageProcessing';
+import { ProgressBar } from './ProgressBar';
 
 interface ImageUploadProps {
   className?: string;
@@ -173,10 +174,11 @@ export function ImageList({ className }: ImageListProps) {
     loadPage,
     isLoading, 
     paginatedData,
-    currentPage
+    currentPage,
+    processingImages,
+    errorImages
   } = useAppStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
 
   // Load images from server on component mount
   useEffect(() => {
@@ -193,9 +195,7 @@ export function ImageList({ className }: ImageListProps) {
   };
 
   const handlePageChange = async (page: number) => {
-    if (!showCompleted) {
-      await loadPage(page);
-    }
+    await loadPage(page);
   };
 
   const getStatusIcon = (status: string) => {
@@ -211,8 +211,8 @@ export function ImageList({ className }: ImageListProps) {
     }
   };
 
-  // Combine images based on the toggle
-  const displayImages = showCompleted ? processedImages : images;
+  // Display pending images by default
+  const displayImages = images;
   const totalImages = images.length + processedImages.length;
 
   if (isLoading && totalImages === 0) {
@@ -248,45 +248,34 @@ export function ImageList({ className }: ImageListProps) {
       <div className="list-header">
         <div className="list-title">
           <h3>Images ({paginatedData?.total_files || totalImages})</h3>
-          <div className="view-toggle">
-            <button 
-              className={`toggle-btn ${!showCompleted ? 'active' : ''}`}
-              onClick={() => setShowCompleted(false)}
-            >
-              Pending ({images.length})
-            </button>
-            <button 
-              className={`toggle-btn ${showCompleted ? 'active' : ''}`}
-              onClick={() => setShowCompleted(true)}
-            >
-              Processed ({processedImages.length})
-            </button>
-          </div>
-        </div>
-        <div className="list-actions">
-          <button 
-            onClick={handleRefresh}
-            className="refresh-button"
-            disabled={isRefreshing}
-            title="Refresh from server"
-          >
-            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-          </button>
-        </div>
-        <div className="list-stats">
-          <span className="stat">
-            Completed: {processedImages.length}
-          </span>
-          {paginatedData && (
-            <span className="stat">
-              Page: {paginatedData.page}/{paginatedData.total_pages}
-            </span>
+          
+          {/* 添加进度条 */}
+          {(paginatedData || totalImages > 0) && (
+            <ProgressBar
+              value={paginatedData?.completion_rate || (processedImages.length / totalImages * 100)}
+              totalFiles={paginatedData?.total_files || totalImages}
+              completedFiles={processedImages.length}
+              processingFiles={processingImages.size}
+              errorFiles={errorImages.size}
+              showDetails={true}
+              theme={
+                (paginatedData?.completion_rate || (processedImages.length / totalImages * 100)) === 100 
+                  ? 'success' 
+                  : errorImages.size > 0
+                  ? 'error'
+                  : processingImages.size > 0
+                  ? 'warning'
+                  : 'default'
+              }
+            />
           )}
-        </div>
+
+        </div>       
+        
       </div>
       
-      {/* Pagination controls for pending images */}
-      {!showCompleted && paginatedData && paginatedData.total_pages > 1 && (
+      {/* Pagination controls */}
+      {paginatedData && paginatedData.total_pages > 1 && (
         <div className="pagination-controls">
           <button
             onClick={() => handlePageChange(currentPage - 1)}
