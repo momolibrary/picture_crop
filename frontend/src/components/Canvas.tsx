@@ -435,48 +435,7 @@ export function Canvas({ className, onCanvasResize }: CanvasProps) {
         Image: {currentImage?.originalName || 'None'}
       </div>
       
-      {/* Canvas Controls */}
-      <div className="canvas-controls">
-        <div className="control-group">
-          <button
-            className="control-btn"
-            onClick={() => setZoom(Math.min(5, viewState.zoom + 0.25))}
-            title="Zoom In"
-          >
-            <ZoomIn size={16} />
-          </button>
-          <div className="zoom-info">
-            {Math.round(viewState.zoom * 100)}%
-          </div>
-          <button
-            className="control-btn"
-            onClick={() => setZoom(Math.max(0.1, viewState.zoom - 0.25))}
-            title="Zoom Out"
-          >
-            <ZoomOut size={16} />
-          </button>
-        </div>
-        
-        <div className="control-group">
-          <button
-            className="control-btn"
-            onClick={resetView}
-            title="Reset View"
-          >
-            <RotateCcw size={16} />
-          </button>
-        </div>
-        
-        <div className="control-group">
-          <button
-            className={`control-btn ${settings.showGrid ? 'active' : ''}`}
-            onClick={() => updateSettings({ showGrid: !settings.showGrid })}
-            title="Toggle Grid"
-          >
-            <Grid3X3 size={16} />
-          </button>
-        </div>
-      </div>
+          
       
       {/* Corner Position Info */}
       {viewState.selectedCorner !== null && currentImage?.cropArea && (
