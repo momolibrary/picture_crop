@@ -1,32 +1,60 @@
-# 图片梯形裁剪校正应用
+# 图片梯形裁剪校正应用 (重构版本 2.0)
 
-这是一个基于FastAPI和OpenCV的Web应用，用于对图片进行梯形裁剪校正。适用于扫描文档、白板拍照等场景的透视校正。
+这是一个现代化的图片梯形裁剪校正应用，采用前后端分离架构。后端使用 FastAPI 提供 REST API 服务，前端使用 React + TypeScript + Vite 构建现代化用户界面。
 
-## 功能特点
+## 🚀 架构特点
 
-- **自动检测**：自动识别图片中的矩形轮廓
-- **手动调整**：可手动拖拽四个角点进行精确调整
-- **透视校正**：将梯形区域校正为矩形
-- **批量处理**：支持上传多张图片
-- **直观界面**：简洁的Web界面，易于操作
+- **前后端分离**：后端专注于 API 服务，前端提供现代化用户体验
+- **纯 API 后端**：基于 FastAPI 的 REST API，支持自动文档生成
+- **现代前端**：React + TypeScript + Vite，组件化开发
+- **类型安全**：完整的 TypeScript 类型定义
+- **开发友好**：热重载、自动文档、代码提示
 
-## 项目结构
-
-重构后的项目采用模块化设计，代码更清晰、更易维护：
+## 📁 项目结构
 
 ```
-├── main.py              # FastAPI主应用和路由定义
-├── image_processor.py   # 图像处理核心功能模块
-├── html_templates.py    # HTML模板生成模块
-├── requirements.txt     # 项目依赖
-├── start.bat           # 启动脚本
-├── README.md           # 项目说明文档
-├── static/             # 静态文件目录
-│   └── style.css       # 样式文件
-├── source_images/      # 待处理图片存放目录
-├── processed/          # 已处理原图存放目录
-└── output_images/      # 处理结果存放目录
+├── 后端 (Python FastAPI)
+│   ├── main.py              # API 服务主文件
+│   ├── image_processor.py   # 图像处理核心模块
+│   ├── html_templates.py    # 旧版 HTML 模板 (待删除)
+│   ├── requirements.txt     # Python 依赖
+│   ├── start_api.bat       # API 服务启动脚本
+│   ├── API_DOCUMENTATION.md # API 文档
+│   ├── source_images/      # 待处理图片目录
+│   ├── processed/          # 已处理图片目录
+│   └── output_images/      # 裁剪结果目录
+│
+├── 前端 (React + TypeScript)
+│   ├── frontend/
+│   │   ├── src/
+│   │   │   ├── components/  # React 组件
+│   │   │   ├── hooks/       # 自定义 Hooks
+│   │   │   ├── stores/      # Zustand 状态管理
+│   │   │   ├── types/       # TypeScript 类型定义
+│   │   │   ├── utils/       # 工具函数
+│   │   │   └── App.tsx      # 主应用组件
+│   │   ├── package.json     # 前端依赖
+│   │   ├── vite.config.ts   # Vite 配置
+│   │   └── tsconfig.json    # TypeScript 配置
+│
+└── 文档
+    └── README.md           # 项目说明
 ```
+
+## 🛠️ 技术栈
+
+### 后端
+- **FastAPI**: 现代 Python Web 框架
+- **OpenCV**: 图像处理库
+- **Pydantic**: 数据验证和序列化
+- **Uvicorn**: ASGI 服务器
+
+### 前端
+- **React 18**: 用户界面库
+- **TypeScript**: 类型安全的 JavaScript
+- **Vite**: 快速构建工具
+- **Zustand**: 轻量级状态管理
+- **Tailwind CSS**: 实用优先的 CSS 框架
 
 ### 模块说明
 
@@ -64,6 +92,102 @@
    python main.py
    ```
 5. 在浏览器中访问 `http://localhost:8000`
+
+## 🚀 快速开始
+
+### 1. 启动后端 API 服务
+
+```bash
+# 方法一：使用启动脚本
+./start_api.bat
+
+# 方法二：直接运行 Python
+python main.py
+
+# 方法三：使用 uvicorn
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+API 服务将在 http://localhost:8000 启动
+
+### 2. 启动前端开发服务器
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+前端将在 http://localhost:5173 启动
+
+### 3. 访问应用
+
+- **前端应用**: http://localhost:5173
+- **API 文档**: http://localhost:8000/docs
+- **备用文档**: http://localhost:8000/redoc
+
+## 📖 API 文档
+
+完整的 API 文档请查看：
+- **在线文档**: http://localhost:8000/docs (启动服务后访问)
+- **本地文档**: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+
+主要 API 端点：
+- `GET /api/files` - 获取文件列表
+- `POST /api/upload` - 上传图片
+- `GET /api/image/{filename}` - 获取图片
+- `POST /api/auto-detect/{filename}` - 自动检测角点
+- `POST /api/preview/{filename}` - 生成预览
+- `POST /api/crop/{filename}` - 执行裁剪
+
+## 🔧 开发说明
+
+### 后端开发
+1. 修改 `main.py` 添加新的 API 端点
+2. 在 `image_processor.py` 中添加图像处理功能
+3. 使用 `--reload` 参数自动重载代码更改
+
+### 前端开发
+1. 组件放在 `frontend/src/components/`
+2. 状态管理使用 Zustand，存储在 `frontend/src/stores/`
+3. 类型定义放在 `frontend/src/types/`
+4. API 调用使用 TypeScript 类型安全的接口
+
+## 🔄 版本对比
+
+| 功能 | 旧版本 (1.0) | 新版本 (2.0) |
+|------|-------------|-------------|
+| 架构 | 单体应用 | 前后端分离 |
+| 前端 | HTML 模板 | React + TypeScript |
+| 后端 | FastAPI + HTML | 纯 API |
+| 状态管理 | DOM 操作 | Zustand |
+| 类型安全 | 无 | 完整 TypeScript |
+| 开发体验 | 基础 | 热重载、自动文档 |
+| 组件化 | 无 | 完全组件化 |
+| 构建工具 | 无 | Vite |
+
+## 📋 功能特点
+
+### 核心功能
+- ✅ **自动检测**：智能识别图片中的矩形角点
+- ✅ **手动调整**：可拖拽四个角点进行精确定位
+- ✅ **实时预览**：裁剪前预览效果
+- ✅ **透视校正**：将梯形区域校正为标准矩形
+- ✅ **批量上传**：支持同时上传多张图片
+- ✅ **进度跟踪**：显示处理进度和完成状态
+
+### 用户体验
+- 🎨 **现代界面**：基于 React 的响应式用户界面
+- 🖱️ **直观操作**：拖拽式角点调整
+- 📱 **移动适配**：支持移动设备使用
+- ⚡ **快速响应**：优化的性能和加载速度
+- 🔄 **实时反馈**：操作结果即时显示
+
+### 开发者友好
+- 📝 **自动文档**：API 文档自动生成
+- 🔧 **类型安全**：完整的 TypeScript 支持
+- 🚀 **热重载**：开发时实时更新
+- 📦 **模块化**：清晰的代码组织结构
 
 ## 使用方法
 

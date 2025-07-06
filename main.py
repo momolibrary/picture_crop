@@ -1,16 +1,17 @@
 """
-图片梯形裁剪校正工具 - 主应用文件
-基于 FastAPI 的图像处理服务，支持梯形图片的透视校正和裁剪
+图片梯形裁剪校正工具 - API 服务
+基于 FastAPI 的纯 API 图像处理服务，支持梯形图片的透视校正和裁剪
+为现代前端应用提供完整的 REST API 接口
 """
 import os
 import cv2
 import shutil
 import time
 import uvicorn
-from typing import List
-from fastapi import FastAPI, UploadFile, Request, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, Response
-from fastapi.staticfiles import StaticFiles
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, HTTPException, File
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 # 导入自定义模块
@@ -21,19 +22,19 @@ from image_processor import (
     encode_image_to_jpeg,
     auto_detect_corners
 )
-from html_templates import (
-    generate_index_html, 
-    generate_edit_html, 
-    generate_batch_process_html
-)
 
 # 创建 FastAPI 应用
-app = FastAPI(title="图片梯形裁剪校正工具", version="1.0.0")
+app = FastAPI(
+    title="图片梯形裁剪校正 API",
+    description="为图片梯形裁剪校正工具提供的完整 REST API 接口",
+    version="2.0.0"
+)
 
 # 添加 CORS 中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],  # 允许前端开发服务器
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -48,10 +49,154 @@ os.makedirs(SOURCE_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
 
-# 挂载静态文件
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# API 数据模型定义
+class ImageInfo(BaseModel):
+    """图片信息模型"""
+    filename: str
+    width: int
+    height: int
+    file_size: Optional[int] = None
+    created_time: Optional[str] = None
 
-@app.get("/image/{filename}")
+class FileListResponse(BaseModel):
+    """文件列表响应模型"""
+    pending_files: List[ImageInfo]
+    processed_files: List[str]
+    total_files: int
+    completion_rate: float
+
+class CropRequest(BaseModel):
+    """裁剪请求模型"""
+    points: List[List[float]]  # 四个角点坐标 [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+
+class CropResponse(BaseModel):
+    """裁剪响应模型"""
+    success: bool
+    filename: Optional[str] = None
+    message: str
+    processed_filename: Optional[str] = None
+    error: Optional[str] = None
+
+class AutoDetectResponse(BaseModel):
+    """自动检测响应模型"""
+    success: bool
+    corners: Optional[List[List[float]]] = None
+    confidence: float
+    message: str
+    error: Optional[str] = None
+
+class NextFileResponse(BaseModel):
+    """下一个文件响应模型"""
+    success: bool
+    next_filename: Optional[str] = None
+    remaining_count: int
+    message: str
+
+@app.get("/")
+async def root():
+    """根路径 - 重定向到 API 文档"""
+    return {
+        "message": "图片梯形裁剪校正 API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "status": "active"
+    }
+
+@app.get("/api/health")
+async def health_check():
+    """健康检查端点"""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "directories": {
+            "source": os.path.exists(SOURCE_DIR),
+            "output": os.path.exists(OUTPUT_DIR),
+            "processed": os.path.exists(PROCESSED_DIR)
+        }
+    }
+
+# API 实现部分
+@app.get("/api/files", response_model=FileListResponse)
+async def get_files():
+    """获取文件列表 - 替代原来的首页"""
+    try:
+        # 获取待处理文件
+        files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        pending_files = []
+        
+        for filename in files:
+            path = os.path.join(SOURCE_DIR, filename)
+            if os.path.exists(path):
+                try:
+                    img = cv2.imread(path)
+                    if img is not None:
+                        height, width = img.shape[:2]
+                        file_size = os.path.getsize(path)
+                        created_time = time.ctime(os.path.getctime(path))
+                        
+                        pending_files.append(ImageInfo(
+                            filename=filename,
+                            width=int(width),
+                            height=int(height),
+                            file_size=file_size,
+                            created_time=created_time
+                        ))
+                except Exception as e:
+                    print(f"Error processing file {filename}: {e}")
+                    continue
+        
+        # 获取已处理文件
+        processed_files = [f for f in os.listdir(PROCESSED_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+        
+        # 计算统计信息
+        total_files = len(pending_files) + len(processed_files)
+        completion_rate = (len(processed_files) / total_files * 100) if total_files > 0 else 100
+        
+        return FileListResponse(
+            pending_files=pending_files,
+            processed_files=processed_files,
+            total_files=total_files,
+            completion_rate=completion_rate
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
+
+
+@app.post("/api/upload")
+async def upload_files(files: List[UploadFile] = File(...)):
+    """上传图片文件"""
+    uploaded_files = []
+    errors = []
+    
+    for file in files:
+        try:
+            # 验证文件类型
+            if not file.content_type or not file.content_type.startswith('image/'):
+                errors.append(f"{file.filename}: 不是有效的图片文件")
+                continue
+            
+            # 保存文件
+            content = await file.read()
+            file_path = os.path.join(SOURCE_DIR, file.filename)
+            
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            uploaded_files.append(file.filename)
+            
+        except Exception as e:
+            errors.append(f"{file.filename}: {str(e)}")
+    
+    return {
+        "uploaded_files": uploaded_files,
+        "errors": errors,
+        "success": len(uploaded_files) > 0
+    }
+
+
+@app.get("/api/image/{filename}")
 async def get_image(filename: str):
     """提供源图片文件访问"""
     path = os.path.join(SOURCE_DIR, filename)
@@ -70,68 +215,14 @@ async def get_image(filename: str):
     media_type = media_type_map.get(file_extension, 'image/jpeg')
     
     return FileResponse(path, media_type=media_type, headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    """首页 - 显示待处理和已处理的图片列表"""
-    files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
-    processed_files = [f for f in os.listdir(PROCESSED_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
-    
-    return generate_index_html(files, processed_files)
-
-
-@app.post("/upload")
-async def upload(files: List[UploadFile]):
-    """上传图片文件"""
-    for file in files:
-        content = await file.read()
-        with open(os.path.join(SOURCE_DIR, file.filename), "wb") as f:
-            f.write(content)
-    return {"status": "ok"}
-
-
-@app.get("/edit/{filename}", response_class=HTMLResponse)
-async def edit(filename: str):
-    """图片编辑页面"""
-    print(f"接收到的filename参数: '{filename}'")
-    path = os.path.join(SOURCE_DIR, filename)
-    print(f"构造的文件路径: '{path}'")
-    print(f"文件是否存在: {os.path.exists(path)}")
-    
-    if not os.path.exists(path):
-        print(f"文件不存在，列出SOURCE_DIR中的文件:")
-        try:
-            files = os.listdir(SOURCE_DIR)
-            for f in files[:5]:  # 只显示前5个文件
-                print(f"  {f}")
-        except Exception as e:
-            print(f"无法列出文件: {e}")
-        return HTMLResponse(f"文件不存在: {filename}", status_code=404)
-    
-    try:
-        # 简单验证文件是否可读
-        img = cv2.imread(path)
-        if img is None:
-            return HTMLResponse("无法读取图片文件", status_code=400)
-        
-        print(f"验证图片: {filename}, 尺寸: {img.shape}")
-    except Exception as e:
-        print(f"处理图片时出错: {str(e)}")
-        return HTMLResponse(f"处理图片时出错: {str(e)}", status_code=500)
-    
-    return generate_edit_html(filename)
-@app.post("/preview/{filename}")
-async def preview_crop(filename: str, request: Request):
+@app.post("/api/preview/{filename}")
+async def preview_crop(filename: str, request: CropRequest):
     """生成裁剪预览"""
     source_path = os.path.join(SOURCE_DIR, filename)
     if not os.path.exists(source_path):
         raise HTTPException(status_code=404, detail="文件不存在")
     
-    data = await request.json()
-    points = data.get("points")
-    
-    if not points or len(points) != 4:
+    if not request.points or len(request.points) != 4:
         raise HTTPException(status_code=400, detail="需要4个角点")
     
     try:
@@ -141,10 +232,10 @@ async def preview_crop(filename: str, request: Request):
         
         height, width = img.shape[:2]
         print(f"生成预览: {filename}, 尺寸: {width}x{height}")
-        print(f"角点坐标: {points}")
+        print(f"角点坐标: {request.points}")
         
         # 验证并修正角点坐标
-        corrected_points = validate_and_correct_points(points, width, height)
+        corrected_points = validate_and_correct_points(request.points, width, height)
         
         # 执行透视变换
         warped = four_point_transform(img, corrected_points)
@@ -164,30 +255,27 @@ async def preview_crop(filename: str, request: Request):
         raise HTTPException(status_code=500, detail=f"生成预览时出错: {str(e)}")
 
 
-@app.post("/crop/{filename}")
-async def crop(filename: str, request: Request):
+@app.post("/api/crop/{filename}", response_model=CropResponse)
+async def crop(filename: str, request: CropRequest):
     """执行图片裁剪并移动文件"""
     source_path = os.path.join(SOURCE_DIR, filename)
     if not os.path.exists(source_path):
         raise HTTPException(status_code=404, detail="文件不存在")
     
-    data = await request.json()
-    points = data.get("points")
-    
-    if not points or len(points) != 4:
-        return {"success": False, "error": "需要4个角点"}
+    if not request.points or len(request.points) != 4:
+        return CropResponse(success=False, message="需要4个角点", error="Invalid points")
     
     try:
         img = cv2.imread(source_path)
         if img is None:
-            return {"success": False, "error": "无法读取图片文件"}
+            return CropResponse(success=False, message="无法读取图片文件", error="Cannot read image")
         
         height, width = img.shape[:2]
         print(f"处理图片: {filename}, 尺寸: {width}x{height}")
-        print(f"接收到的角点坐标: {points}")
+        print(f"接收到的角点坐标: {request.points}")
         
         # 验证并修正角点坐标
-        corrected_points = validate_and_correct_points(points, width, height)
+        corrected_points = validate_and_correct_points(request.points, width, height)
         print(f"修正后的角点坐标: {corrected_points}")
         
         # 执行透视变换
@@ -215,17 +303,17 @@ async def crop(filename: str, request: Request):
         # 移动文件
         shutil.move(source_path, processed_path)
         
-        return {
-            "success": True, 
-            "filename": output_filename,
-            "message": "文件已处理完成并移动到processed文件夹",
-            "processed_filename": os.path.basename(processed_path)
-        }
+        return CropResponse(
+            success=True,
+            filename=output_filename,
+            message="文件已处理完成并移动到processed文件夹",
+            processed_filename=os.path.basename(processed_path)
+        )
     except (IOError, ValueError, RuntimeError) as e:
-        return {"success": False, "error": str(e)}
+        return CropResponse(success=False, message=f"处理失败: {str(e)}", error=str(e))
 
 
-@app.get("/download/{filename}")
+@app.get("/api/download/{filename}")
 async def download(filename: str):
     """下载处理后的图片"""
     path = os.path.join(OUTPUT_DIR, filename)
@@ -235,13 +323,7 @@ async def download(filename: str):
     return FileResponse(path, filename=filename)
 
 
-@app.get("/batch_process", response_class=HTMLResponse)
-async def batch_process():
-    """批量处理页面（已禁用，引导用户手动处理）"""
-    return generate_batch_process_html()
-
-
-@app.get("/image_info/{filename}")
+@app.get("/api/image-info/{filename}", response_model=ImageInfo)
 async def get_image_info(filename: str):
     """返回图片的尺寸信息"""
     path = os.path.join(SOURCE_DIR, filename)
@@ -254,17 +336,22 @@ async def get_image_info(filename: str):
             raise HTTPException(status_code=400, detail="无法读取图片文件")
         
         height, width = img.shape[:2]
-        return {
-            "width": int(width),
-            "height": int(height),
-            "filename": filename
-        }
+        file_size = os.path.getsize(path)
+        created_time = time.ctime(os.path.getctime(path))
+        
+        return ImageInfo(
+            filename=filename,
+            width=int(width),
+            height=int(height),
+            file_size=file_size,
+            created_time=created_time
+        )
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取图片信息时出错: {str(e)}")
 
 
-@app.post("/auto_detect/{filename}")
+@app.post("/api/auto-detect/{filename}", response_model=AutoDetectResponse)
 async def auto_detect_corners_api(filename: str):
     """自动检测图片的四个角点"""
     path = os.path.join(SOURCE_DIR, filename)
@@ -279,51 +366,67 @@ async def auto_detect_corners_api(filename: str):
         
         print(f"自动检测完成 - 角点: {corners}, 置信度: {confidence}")
         
-        return {
-            "success": True,
-            "corners": corners,
-            "confidence": float(confidence),
-            "message": f"自动检测完成，置信度: {confidence:.1%}" if confidence > 0.3 else "检测置信度较低，建议手动调整"
-        }
+        return AutoDetectResponse(
+            success=True,
+            corners=corners,
+            confidence=float(confidence),
+            message=f"自动检测完成，置信度: {confidence:.1%}" if confidence > 0.3 else "检测置信度较低，建议手动调整"
+        )
         
     except Exception as e:
         print(f"自动检测失败: {str(e)}")
-        return {
-            "success": False, 
-            "error": f"自动检测失败: {str(e)}",
-            "corners": None,
-            "confidence": 0.0
-        }
+        return AutoDetectResponse(
+            success=False,
+            corners=None,
+            confidence=0.0,
+            message="自动检测失败",
+            error=str(e)
+        )
 
 
-@app.get("/next_file/{current_filename}")
+@app.get("/api/next-file/{current_filename}", response_model=NextFileResponse)
 async def get_next_file(current_filename: str):
     """获取下一个待处理的图片文件名"""
     try:
         files = [f for f in os.listdir(SOURCE_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
         
         if not files:
-            return {"success": False, "message": "没有待处理的文件"}
+            return NextFileResponse(
+                success=False,
+                next_filename=None,
+                remaining_count=0,
+                message="没有待处理的文件"
+            )
         
         # 如果当前文件还在列表中（这种情况不应该发生，因为裁剪后文件已移动）
         if current_filename in files:
             files.remove(current_filename)
         
         if not files:
-            return {"success": False, "message": "所有文件已处理完成"}
+            return NextFileResponse(
+                success=False,
+                next_filename=None,
+                remaining_count=0,
+                message="所有文件已处理完成"
+            )
         
         # 返回第一个文件（按字母顺序）
         next_file = sorted(files)[0]
-        return {
-            "success": True, 
-            "next_filename": next_file,
-            "remaining_count": len(files)
-        }
+        return NextFileResponse(
+            success=True,
+            next_filename=next_file,
+            remaining_count=len(files),
+            message="获取下一个文件成功"
+        )
         
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return NextFileResponse(
+            success=False,
+            next_filename=None,
+            remaining_count=0,
+            message=f"获取下一个文件失败: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
