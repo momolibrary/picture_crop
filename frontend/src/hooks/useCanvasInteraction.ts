@@ -28,6 +28,10 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
   } | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const THROTTLE_MS = 16; // 提高到60fps，减少闪烁
+  
+  // 新增：跟踪鼠标位置和画布位置，用于瞄准镜
+  const mousePositionRef = useRef<Point>({ x: 0, y: 0 });
+  const canvasPositionRef = useRef<Point>({ x: 0, y: 0 });
 
   const getCropAreaPoints = useCallback((): Point[] => {
     if (!currentImage?.cropArea) return [];
@@ -134,18 +138,24 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
   ]);
 
   const handleMouseMove = useCallback((event: MouseEvent) => {
-    if (!isDraggingRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mousePos = { x: event.clientX, y: event.clientY };
+    const canvasPos = screenToCanvas(mousePos, rect, viewState.zoom, viewState.offset);
+    
+    // 始终更新鼠标位置和画布位置（用于瞄准镜）
+    mousePositionRef.current = mousePos;
+    canvasPositionRef.current = canvasPos;
+
+    if (!isDraggingRef.current) return;
 
     // 防止默认行为，提高性能
     event.preventDefault();
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const mousePos = { x: event.clientX, y: event.clientY };
 
     if (viewState.selectedCorner !== null) {
       // Dragging a corner - 使用节流处理，并添加距离阈值
-      const canvasPos = screenToCanvas(mousePos, rect, viewState.zoom, viewState.offset);
       
       // 只有当鼠标移动距离超过阈值时才更新，减少微小移动导致的重绘
       const lastPos = lastMousePosRef.current;
@@ -220,6 +230,7 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
 
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('wheel', handleWheel);
+    // 在document上监听鼠标移动，确保能跟踪到画布外的移动
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
 
@@ -238,6 +249,10 @@ export function useCanvasInteraction(canvasRef: React.RefObject<HTMLCanvasElemen
 
   return {
     updateCropAreaPoint,
-    getCropAreaPoints
+    getCropAreaPoints,
+    // 瞄准镜相关信息
+    mousePosition: mousePositionRef.current,
+    canvasPosition: canvasPositionRef.current,
+    isDraggingCorner: isDraggingRef.current && viewState.selectedCorner !== null
   };
 }

@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import { loadImage, drawCropArea } from '../utils/imageProcessing';
 import { createDefaultCropArea } from '../utils/geometry';
+import { Magnifier } from './Magnifier';
 
 interface CanvasProps {
   className?: string;
@@ -24,7 +25,11 @@ export function Canvas({ className }: CanvasProps) {
     updateSettings
   } = useAppStore();
   
-  useCanvasInteraction(canvasRef as React.RefObject<HTMLCanvasElement>);
+  const { 
+    mousePosition, 
+    canvasPosition, 
+    isDraggingCorner 
+  } = useCanvasInteraction(canvasRef as React.RefObject<HTMLCanvasElement>);
 
   // 使用useMemo优化渲染条件判断
   const shouldRender = useMemo(() => {
@@ -269,6 +274,18 @@ export function Canvas({ className }: CanvasProps) {
           </div>
         </div>
       )}
+      
+      {/* 瞄准镜 */}
+      <Magnifier
+        isVisible={isDraggingCorner && viewState.selectedCorner !== null}
+        mousePosition={mousePosition}
+        canvasPosition={canvasPosition}
+        imageUrl={currentImage.originalUrl}
+        selectedCorner={viewState.selectedCorner}
+        cropArea={currentImage.cropArea}
+        zoom={viewState.zoom}
+        offset={viewState.offset}
+      />
     </div>
   );
 }
