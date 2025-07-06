@@ -22,8 +22,8 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Image Processing Tool</h1>
-        <p>Trapezoidal cropping and perspective correction</p>
+        <h1>图像处理工具</h1>
+        <p>梯形裁剪和透视校正</p>
       </header>
 
       <main className="app-main">
@@ -58,8 +58,8 @@ function App() {
                 />
               ) : (
                 <div className="empty-state">
-                  <h2>Welcome to Image Processing Tool</h2>
-                  <p>Upload an image to get started with trapezoidal cropping</p>
+                  <h2>欢迎使用图像处理工具</h2>
+                  <p>上传图像开始梯形裁剪</p>
                 </div>
               )}
             </div>

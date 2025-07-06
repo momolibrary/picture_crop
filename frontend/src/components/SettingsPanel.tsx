@@ -35,7 +35,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         <div className="modal-header">
           <h2>
             <Settings size={20} />
-            Settings
+            设置
           </h2>
           <button className="modal-close" onClick={onClose}>
             <X size={24} />
@@ -46,7 +46,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           <div className="settings-section">
             <h3>
               <Zap size={16} />
-              Workflow
+              工作流程
             </h3>
             <div className="setting-item">
               <label className="setting-label">
@@ -59,10 +59,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   })}
                 />
                 <span className="checkmark"></span>
-                Auto advance to next image after processing
+                处理后自动切换到下一张图像
               </label>
               <p className="setting-description">
-                Automatically select the next image in the list after successfully processing the current one.
+                成功处理当前图像后自动选择列表中的下一张图像。
               </p>
             </div>
           </div>
@@ -70,7 +70,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           <div className="settings-section">
             <h3>
               <Grid3X3 size={16} />
-              Display
+              显示
             </h3>
             <div className="setting-item">
               <label className="setting-label">
@@ -83,10 +83,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   })}
                 />
                 <span className="checkmark"></span>
-                Show grid overlay
+                显示网格覆盖层
               </label>
               <p className="setting-description">
-                Display a grid overlay on the canvas to help with alignment.
+                在画布上显示网格覆盖层以帮助对齐。
               </p>
             </div>
 
@@ -101,16 +101,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   })}
                 />
                 <span className="checkmark"></span>
-                Snap to grid
+                吸附到网格
               </label>
               <p className="setting-description">
-                Automatically snap corner points to grid intersections when enabled.
+                启用时自动将角点吸附到网格交叉点。
               </p>
             </div>
 
             <div className="setting-item">
               <label className="setting-label">
-                Zoom step size
+                缩放步长
               </label>
               <div className="slider-container">
                 <input
@@ -128,7 +128,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <span className="slider-value">{(localSettings.zoomStep * 100).toFixed(0)}%</span>
               </div>
               <p className="setting-description">
-                Controls how much the view zooms in or out with each zoom action.
+                控制每次缩放操作的缩放幅度。
               </p>
             </div>
           </div>
@@ -136,11 +136,11 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           <div className="settings-section">
             <h3>
               <Download size={16} />
-              Export
+              导出
             </h3>
             <div className="setting-item">
               <label className="setting-label">
-                Default output format
+                默认输出格式
               </label>
               <select
                 className="setting-select"
@@ -152,13 +152,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <option value="webp">WebP</option>
               </select>
               <p className="setting-description">
-                Choose the default format for exported images.
+                选择导出图像的默认格式。
               </p>
             </div>
 
             <div className="setting-item">
               <label className="setting-label">
-                Image quality
+                图像质量
               </label>
               <div className="slider-container">
                 <input
@@ -173,7 +173,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 <span className="slider-value">90%</span>
               </div>
               <p className="setting-description">
-                Higher quality produces larger files but better image quality.
+                更高的质量会产生更大的文件，但图像质量更好。
               </p>
             </div>
           </div>
@@ -181,13 +181,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={handleReset}>
-            Reset to Defaults
+            重置为默认值
           </button>
           <button className="btn-secondary" onClick={onClose}>
-            Cancel
+            取消
           </button>
           <button className="btn-primary" onClick={handleSave}>
-            Save Settings
+            保存设置
           </button>
         </div>
       </div>

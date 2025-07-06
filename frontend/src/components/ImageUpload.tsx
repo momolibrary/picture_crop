@@ -24,9 +24,9 @@ export function ImageUpload({ className }: ImageUploadProps) {
     // Validate files first
     Array.from(files).forEach(file => {
       if (!isValidImageFile(file)) {
-        errors.push(`Invalid file type: ${file.name}`);
+        errors.push(`无效的文件类型: ${file.name}`);
       } else if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        errors.push(`File too large: ${file.name} (max 10MB)`);
+        errors.push(`文件过大: ${file.name} (最大 10MB)`);
       } else {
         validFiles.push(file);
       }
@@ -105,13 +105,13 @@ export function ImageUpload({ className }: ImageUploadProps) {
   const getUploadText = () => {
     switch (uploadStatus) {
       case 'uploading':
-        return 'Uploading...';
+        return '上传中...';
       case 'success':
-        return 'Upload successful!';
+        return '上传成功！';
       case 'error':
-        return 'Upload failed';
+        return '上传失败';
       default:
-        return 'Upload Images';
+        return '上传图像';
     }
   };
 
@@ -141,17 +141,17 @@ export function ImageUpload({ className }: ImageUploadProps) {
           <h3>{getUploadText()}</h3>
           {uploadStatus === 'idle' && (
             <>
-              <p>Drag and drop images here, or click to select files</p>
+              <p>拖拽图像到此处，或点击选择文件</p>
               <p className="upload-hint">
-                Supports JPG, PNG, GIF, and other image formats (max 10MB each)
+                支持 JPG、PNG、GIF 和其他图像格式（每个文件最大 10MB）
               </p>
             </>
           )}
           {uploadStatus === 'success' && (
-            <p className="success-message">Files uploaded successfully!</p>
+            <p className="success-message">文件上传成功！</p>
           )}
           {uploadStatus === 'error' && (
-            <p className="error-message">Please try again or check file formats</p>
+            <p className="error-message">请重试或检查文件格式</p>
           )}
         </div>
       </div>
@@ -247,7 +247,7 @@ export function ImageList({ className }: ImageListProps) {
     <div className={`image-list ${className || ''}`}>
       <div className="list-header">
         <div className="list-title">
-          <h3>Images ({paginatedData?.total_files || totalImages})</h3>
+          <h3>图像 ({paginatedData?.total_files || totalImages})</h3>
           
           {/* 添加进度条 */}
           {(paginatedData || totalImages > 0) && (
@@ -282,17 +282,17 @@ export function ImageList({ className }: ImageListProps) {
             disabled={!paginatedData.has_prev || isLoading}
             className="pagination-btn"
           >
-            Previous
+            上一页
           </button>
           <span className="pagination-info">
-            Page {currentPage} of {paginatedData.total_pages}
+            第 {currentPage} 页，共 {paginatedData.total_pages} 页
           </span>
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={!paginatedData.has_next || isLoading}
             className="pagination-btn"
           >
-            Next
+            下一页
           </button>
         </div>
       )}
@@ -348,11 +348,11 @@ export function ImageList({ className }: ImageListProps) {
               className="remove-button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Remove "${image.originalName}"?`)) {
+                if (confirm(`删除 "${image.originalName}"？`)) {
                   removeImage(image.id);
                 }
               }}
-              title="Remove image"
+              title="删除图像"
             >
               <X size={16} />
             </button>

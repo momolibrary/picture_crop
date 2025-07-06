@@ -52,7 +52,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
 
   const handleAutoDetect = async () => {
     if (!currentImage) {
-      setError('No image selected');
+      setError('未选择图像');
       return;
     }
 
@@ -70,11 +70,11 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
         
         updateImage(currentImage.id, { cropArea });
       } else {
-        setError(result.message || 'Auto detection failed');
+        setError(result.message || '自动检测失败');
       }
     } catch (error) {
       console.error('Auto detect failed:', error);
-      setError('Auto detection failed');
+      setError('自动检测失败');
     } finally {
       setIsAutoDetecting(false);
     }
@@ -82,7 +82,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
 
   const handlePreview = () => {
     if (!currentImage || !currentImage.cropArea) {
-      setError('Please define a crop area first');
+      setError('请先定义裁剪区域');
       return;
     }
     setShowPreview(true);
@@ -104,7 +104,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
 
   const handleDownload = async () => {
     if (!currentImage || !currentImage.cropArea) {
-      setError('No image or crop area selected');
+      setError('未选择图像或裁剪区域');
       return;
     }
 
@@ -118,7 +118,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
       // For now, just show the preview modal
       setShowPreview(true);
     } catch (error) {
-      setError('Failed to download image');
+      setError('下载图像失败');
       console.error('Download error:', error);
     }
   };
@@ -136,7 +136,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button"
             onClick={handleZoomOut}
             disabled={viewState.zoom <= 0.1}
-            title="Zoom Out"
+            title="缩小"
           >
             <ZoomOut size={18} />
           </button>
@@ -149,7 +149,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button"
             onClick={handleZoomIn}
             disabled={viewState.zoom >= 5}
-            title="Zoom In"
+            title="放大"
           >
             <ZoomIn size={18} />
           </button>
@@ -160,7 +160,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
           <button
             className="toolbar-button"
             onClick={handleReset}
-            title="Reset View"
+            title="重置视图"
           >
             <RotateCcw size={18} />
           </button>
@@ -168,7 +168,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
           <button
             className={`toolbar-button ${settings.showGrid ? 'active' : ''}`}
             onClick={toggleGrid}
-            title="Toggle Grid"
+            title="切换网格"
           >
             <Grid3X3 size={18} />
           </button>
@@ -180,7 +180,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button"
             onClick={handleAutoDetect}
             disabled={!currentImage || isAutoDetecting}
-            title="Auto Detect Corners"
+            title="自动检测角点"
           >
             {isAutoDetecting ? (
               <Settings className="spin" size={18} />
@@ -193,7 +193,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button"
             onClick={handleResetCrop}
             disabled={!currentImage}
-            title="Reset Crop Area"
+            title="重置裁剪区域"
           >
             <Square size={18} />
           </button>
@@ -205,7 +205,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button"
             onClick={handlePreview}
             disabled={!currentImage || !currentImage.cropArea}
-            title="Preview Result"
+            title="预览结果"
           >
             <Eye size={18} />
           </button>
@@ -213,7 +213,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
           <button
             className="toolbar-button"
             onClick={() => setShowSettings(true)}
-            title="Settings"
+            title="设置"
           >
             <Settings size={18} />
           </button>
@@ -222,7 +222,7 @@ export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: To
             className="toolbar-button primary"
             onClick={handleDownload}
             disabled={!currentImage || !currentImage.cropArea}
-            title="Download Cropped Image"
+            title="下载裁剪图像"
           >
             <Download size={18} />
           </button>
