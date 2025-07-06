@@ -240,12 +240,12 @@ export const apiService = {
       
       const cropResponse = await this.cropImage(filename, points);
       
-      if (cropResponse.success && cropResponse.processed_filename) {
-        const processedImageUrl = await this.downloadResult(cropResponse.processed_filename);
+      if (cropResponse.success && cropResponse.filename) {
+        const processedImageUrl = await this.downloadResult(cropResponse.filename);
         return {
           success: true,
           processedImageUrl,
-          filename: cropResponse.processed_filename,
+          filename: cropResponse.filename,
           message: 'Image processed successfully'
         };
       } else {

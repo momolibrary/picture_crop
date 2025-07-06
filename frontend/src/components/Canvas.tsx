@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Grid3X3 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
@@ -11,6 +11,8 @@ interface CanvasProps {
 
 export function Canvas({ className }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const renderFrameRef = useRef<number>(0);
+  const lastRenderTimeRef = useRef<number>(0);
   const { 
     currentImage, 
     viewState, 
@@ -21,7 +23,33 @@ export function Canvas({ className }: CanvasProps) {
     updateSettings
   } = useAppStore();
   
-  useCanvasInteraction(canvasRef);
+  useCanvasInteraction(canvasRef as React.RefObject<HTMLCanvasElement>);
+
+  // 使用useMemo优化渲染条件判断
+  const shouldRender = useMemo(() => {
+    return !!(canvasRef.current && currentImage);
+  }, [currentImage]);
+
+  // 节流渲染函数
+  const throttledRender = useMemo(() => {
+    const RENDER_THROTTLE_MS = 32; // 30fps，减少闪烁
+    
+    return (renderFn: () => void) => {
+      const now = Date.now();
+      if (now - lastRenderTimeRef.current < RENDER_THROTTLE_MS) {
+        if (renderFrameRef.current) {
+          cancelAnimationFrame(renderFrameRef.current);
+        }
+        renderFrameRef.current = requestAnimationFrame(() => {
+          renderFn();
+          lastRenderTimeRef.current = Date.now();
+        });
+      } else {
+        renderFn();
+        lastRenderTimeRef.current = now;
+      }
+    };
+  }, []);
 
   // Initialize crop area when image loads
   useEffect(() => {
@@ -29,17 +57,16 @@ export function Canvas({ className }: CanvasProps) {
 
     const initializeCropArea = async () => {
       try {
-        const img = await loadImage(currentImage.originalUrl);
         const canvas = canvasRef.current!;
         
-        // Set canvas size to image size or container size
-        const maxWidth = canvas.parentElement?.clientWidth || 800;
-        const maxHeight = canvas.parentElement?.clientHeight || 600;
+        // Set canvas size to fill the container (16:9 aspect ratio)
+        const containerWidth = canvas.parentElement?.clientWidth || 800;
+        const containerHeight = canvas.parentElement?.clientHeight || Math.round(containerWidth * 9 / 16);
         
-        canvas.width = Math.min(img.width, maxWidth);
-        canvas.height = Math.min(img.height, maxHeight);
+        canvas.width = containerWidth;
+        canvas.height = containerHeight;
         
-        // Create default crop area
+        // Create default crop area based on canvas size
         const cropArea = createDefaultCropArea(canvas.width, canvas.height);
         
         updateImage(currentImage.id, { 
@@ -57,9 +84,9 @@ export function Canvas({ className }: CanvasProps) {
 
   // Render canvas content
   useEffect(() => {
-    if (!canvasRef.current || !currentImage) return;
+    if (!shouldRender) return;
 
-    const canvas = canvasRef.current;
+    const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -73,7 +100,7 @@ export function Canvas({ className }: CanvasProps) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Load and draw image
-        const img = await loadImage(currentImage.originalUrl);
+        const img = await loadImage(currentImage!.originalUrl);
         
         // Calculate image position and size
         const scale = Math.min(
@@ -97,10 +124,10 @@ export function Canvas({ className }: CanvasProps) {
         ctx.restore();
         
         // Draw crop area if it exists
-        if (currentImage.cropArea) {
+        if (currentImage!.cropArea) {
           drawCropArea(
             ctx,
-            currentImage.cropArea,
+            currentImage!.cropArea,
             viewState.zoom,
             viewState.offset,
             viewState.selectedCorner
@@ -124,8 +151,32 @@ export function Canvas({ className }: CanvasProps) {
       }
     };
 
-    render();
-  }, [currentImage, viewState]);
+    // 使用节流渲染
+    throttledRender(render);
+  }, [shouldRender, currentImage, viewState, throttledRender]);
+
+  // Handle window resize to adjust canvas size
+  useEffect(() => {
+    const handleResize = () => {
+      if (!canvasRef.current) return;
+      
+      const canvas = canvasRef.current;
+      const containerWidth = canvas.parentElement?.clientWidth || 800;
+      const containerHeight = canvas.parentElement?.clientHeight || Math.round(containerWidth * 9 / 16);
+      
+      canvas.width = containerWidth;
+      canvas.height = containerHeight;
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      // 清理动画帧
+      if (renderFrameRef.current) {
+        cancelAnimationFrame(renderFrameRef.current);
+      }
+    };
+  }, []);
 
   if (!currentImage) {
     return (

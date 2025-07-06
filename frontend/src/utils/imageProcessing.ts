@@ -104,38 +104,10 @@ export function drawCropArea(
     y: point.y * zoom + offset.y
   }));
   
-  // Draw crop area outline
+  // 使用 save/restore 来避免状态污染
   ctx.save();
-  ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([]);
   
-  ctx.beginPath();
-  ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
-  for (let i = 1; i < transformedPoints.length; i++) {
-    ctx.lineTo(transformedPoints[i].x, transformedPoints[i].y);
-  }
-  ctx.closePath();
-  ctx.stroke();
-  
-  // Draw corner handles
-  transformedPoints.forEach((point, index) => {
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-    
-    if (selectedCorner === index) {
-      ctx.fillStyle = '#ef4444';
-      ctx.strokeStyle = '#dc2626';
-    } else {
-      ctx.fillStyle = '#3b82f6';
-      ctx.strokeStyle = '#2563eb';
-    }
-    
-    ctx.fill();
-    ctx.stroke();
-  });
-  
-  // Draw semi-transparent overlay outside crop area
+  // Draw semi-transparent overlay outside crop area first
   ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
@@ -148,6 +120,39 @@ export function drawCropArea(
   }
   ctx.closePath();
   ctx.fill();
+  
+  // Reset composite operation for drawing outline and handles
+  ctx.globalCompositeOperation = 'source-over';
+  
+  // Draw crop area outline with bright green color
+  ctx.strokeStyle = '#00ff00'; // 亮绿色
+  ctx.lineWidth = 3;
+  ctx.setLineDash([]);
+  
+  ctx.beginPath();
+  ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
+  for (let i = 1; i < transformedPoints.length; i++) {
+    ctx.lineTo(transformedPoints[i].x, transformedPoints[i].y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  
+  // Draw corner handles - 批量绘制以提高性能
+  transformedPoints.forEach((point, index) => {
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
+    
+    if (selectedCorner === index) {
+      ctx.fillStyle = '#ff0000'; // 选中时红色
+      ctx.strokeStyle = '#cc0000';
+    } else {
+      ctx.fillStyle = '#00ff00'; // 亮绿色
+      ctx.strokeStyle = '#00cc00';
+    }
+    
+    ctx.fill();
+    ctx.stroke();
+  });
   
   ctx.restore();
 }
