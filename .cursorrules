@@ -1,0 +1,210 @@
+# Cursor Rules for Image Cropping Tool
+# 图片梯形裁剪校正工具 - Cursor AI 编码规范
+
+## Project Overview
+This is a modern image processing web application for trapezoidal cropping and perspective correction.
+- **Backend**: Python FastAPI server for image processing
+- **Frontend**: React + TypeScript + Vite for modern web UI
+- **Purpose**: Batch processing of trapezoidal images with perspective correction
+
+## Tech Stack
+- **Backend**: Python 3.10+, FastAPI, OpenCV, Uvicorn
+- **Frontend**: React 18, TypeScript, Vite, Zustand (state management)
+- **Styling**: Pure CSS with modern design patterns
+- **Icons**: Lucide React
+- **Image Processing**: OpenCV (cv2) for perspective transformation
+
+## Project Structure
+```
+BOM会议/
+├── main.py                 # FastAPI backend server
+├── image_processor.py      # Core image processing logic
+├── html_templates.py       # HTML template utilities
+├── requirements.txt        # Python dependencies
+├── frontend/              # React frontend application
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── store/        # Zustand state management
+│   │   ├── services/     # API service layer
+│   │   ├── types/        # TypeScript type definitions
+│   │   ├── utils/        # Utility functions
+│   │   └── hooks/        # Custom React hooks
+│   ├── package.json
+│   └── vite.config.ts
+├── source_images/         # Input images folder
+├── output_images/         # Processed images folder
+├── processed/            # Completed images archive
+└── thumbnails/           # Generated thumbnails
+```
+
+## Coding Standards
+
+### TypeScript/React (Frontend)
+- Use functional components with hooks
+- Prefer TypeScript strict mode
+- Use descriptive component and variable names in English
+- State management with Zustand
+- CSS-in-JS is NOT used - stick to pure CSS classes
+- Use Lucide React for icons consistently
+- Implement proper error boundaries and loading states
+
+### Python (Backend)
+- Follow PEP 8 style guidelines
+- Use type hints for all function parameters and return values
+- Async/await pattern for FastAPI endpoints
+- Comprehensive error handling with try/catch blocks
+- Use descriptive variable names and docstrings
+- OpenCV operations should be well-documented
+
+### CSS Styling
+- Use BEM-like naming convention for CSS classes
+- Implement responsive design (mobile-first approach)
+- Use CSS custom properties for consistent theming
+- Modern CSS features: Grid, Flexbox, CSS animations
+- Avoid inline styles - use CSS classes instead
+
+## Key Components
+
+### Backend Components
+- `main.py`: FastAPI server with CORS, file upload, image processing endpoints
+- `image_processor.py`: Core image processing functions using OpenCV
+- API endpoints follow RESTful conventions
+
+### Frontend Components
+- `Canvas.tsx`: Main image display and crop area manipulation
+- `PreviewModal.tsx`: Modal for crop result confirmation
+- `ImageUpload.tsx`: File upload and image list management
+- `Magnifier.tsx`: Zoom magnifier for precise corner placement
+- `Toolbar.tsx`: Action buttons and controls
+
+### State Management
+- Use Zustand store (`useAppStore`) for global state
+- Separate concerns: UI state, image data, view state, settings
+- Implement proper state updates and side effects
+
+## API Design Patterns
+- RESTful endpoints with clear naming
+- Consistent response format with success/error fields
+- File handling with proper MIME type validation
+- Pagination support for large image lists
+- Error responses with descriptive messages
+
+## Image Processing Workflow
+1. **Upload**: Multiple image upload with validation
+2. **Display**: Show image with default crop area
+3. **Edit**: Manual corner adjustment with magnifier
+4. **Preview**: Generate preview with confirmation modal
+5. **Process**: Apply perspective correction and save
+6. **Batch**: Auto-advance to next image for efficiency
+
+## Performance Considerations
+- Image thumbnails for fast loading
+- Canvas optimization for smooth interactions
+- Lazy loading for image lists
+- Proper cleanup of event listeners and resources
+- Efficient state updates to prevent unnecessary re-renders
+
+## User Experience Guidelines
+- **Responsive Design**: Support desktop and mobile devices
+- **Accessibility**: Proper ARIA labels and keyboard navigation
+- **Loading States**: Show progress for async operations
+- **Error Handling**: User-friendly error messages
+- **Batch Processing**: Streamlined workflow for multiple images
+
+## Code Quality Rules
+
+### When writing new code:
+1. **Always add TypeScript types** for new interfaces and props
+2. **Include error handling** for all async operations
+3. **Add loading states** for user feedback
+4. **Use consistent naming**: English for code, Chinese for UI text
+5. **Document complex logic** with clear comments
+6. **Test edge cases** especially for image processing operations
+
+### When modifying existing code:
+1. **Maintain existing patterns** and architectural decisions
+2. **Update related tests** if functionality changes
+3. **Consider performance impact** of changes
+4. **Preserve backward compatibility** where possible
+5. **Update documentation** if APIs change
+
+### File organization:
+- Keep components small and focused (< 300 lines)
+- Separate business logic from UI components
+- Use custom hooks for reusable logic
+- Group related utilities together
+
+## Common Patterns
+
+### API Calls
+```typescript
+// Use the apiService pattern
+const result = await apiService.methodName(params);
+if (result.success) {
+  // Handle success
+} else {
+  setError(result.message);
+}
+```
+
+### Component Props
+```typescript
+interface ComponentProps {
+  className?: string;
+  isLoading?: boolean;
+  onAction?: () => void;
+}
+```
+
+### State Updates
+```typescript
+// Use Zustand store methods
+const { updateImage, setError } = useAppStore();
+updateImage(id, { status: 'completed' });
+```
+
+### CSS Classes
+```css
+/* Use descriptive, component-based naming */
+.component-name { }
+.component-name__element { }
+.component-name--modifier { }
+```
+
+## Special Considerations
+
+### Image Processing
+- Always validate image formats and sizes
+- Handle OpenCV errors gracefully
+- Provide fallbacks for failed operations
+- Consider memory usage for large images
+
+### Canvas Operations
+- Use requestAnimationFrame for smooth animations
+- Implement proper coordinate transformations
+- Handle zoom and pan operations efficiently
+- Maintain aspect ratios correctly
+
+### File Management
+- Organize uploaded/processed files properly
+- Implement cleanup for temporary files
+- Handle concurrent file operations safely
+- Provide proper file metadata
+
+## Testing Guidelines
+- Test image processing with various formats
+- Verify responsive design on different screen sizes
+- Test batch processing workflows
+- Validate error handling for edge cases
+- Performance testing with large images
+
+## Deployment Notes
+- Use `start.bat` for local development
+- Backend runs on port 8000, frontend on port 5173
+- Ensure proper CORS configuration
+- Handle file permissions correctly
+- Consider container deployment for production
+
+## 调试时有限使用powershell的命令，记住powershell语法不支持 &&
+
+Remember: This is a specialized image processing tool focusing on trapezoidal correction. Always prioritize image quality, user experience, and processing efficiency in any changes or additions.

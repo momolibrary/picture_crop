@@ -67,17 +67,22 @@ export function Magnifier({
         const baseImgX = (canvasElement.width - baseImgWidth) / 2;
         const baseImgY = (canvasElement.height - baseImgHeight) / 2;
 
+        // 应用当前的变换
+        const actualScale = baseScale * zoom;
+        const actualImgX = baseImgX * zoom + offset.x;
+        const actualImgY = baseImgY * zoom + offset.y;
+
         // canvasPosition 是经过 screenToCanvas 转换的坐标
         // 它已经考虑了 zoom 和 offset 的逆变换
-        // 现在需要将其转换为图片坐标系
+        // 但我们需要基于实际变换后的图片位置来计算
         
-        // 转换为图片内的相对坐标（基于变换前的图片位置）
-        const relativeX = canvasPosition.x - baseImgX;
-        const relativeY = canvasPosition.y - baseImgY;
+        // 计算鼠标在变换后图片中的相对位置
+        const relativeX = (canvasPosition.x * zoom + offset.x) - actualImgX;
+        const relativeY = (canvasPosition.y * zoom + offset.y) - actualImgY;
         
         // 转换为原始图片坐标
-        const imgOriginalX = relativeX / baseScale;
-        const imgOriginalY = relativeY / baseScale;
+        const imgOriginalX = relativeX / actualScale;
+        const imgOriginalY = relativeY / actualScale;
 
         // 计算放大区域的范围（在原始图片坐标系中）
         const zoomRadius = MAGNIFIER_SIZE / (2 * MAGNIFIER_ZOOM * baseScale);
@@ -107,17 +112,21 @@ export function Magnifier({
           
           const corner = corners[selectedCorner];
           
-          // 角点坐标是画布坐标系中的点，与鼠标位置使用相同的坐标系
+          // 角点坐标是画布坐标系中的点，需要考虑当前的变换
           const cornerCanvasX = corner.x;
           const cornerCanvasY = corner.y;
           
-          // 将角点坐标转换为图片内的相对坐标（与鼠标位置使用相同的变换）
-          const cornerRelativeX = cornerCanvasX - baseImgX;
-          const cornerRelativeY = cornerCanvasY - baseImgY;
+          // 将角点坐标转换为变换后的实际画布位置
+          const actualCornerX = cornerCanvasX * zoom + offset.x;
+          const actualCornerY = cornerCanvasY * zoom + offset.y;
+          
+          // 计算角点在变换后图片中的相对位置
+          const cornerRelativeX = actualCornerX - actualImgX;
+          const cornerRelativeY = actualCornerY - actualImgY;
           
           // 转换为原始图片坐标
-          const cornerImgX = cornerRelativeX / baseScale;
-          const cornerImgY = cornerRelativeY / baseScale;
+          const cornerImgX = cornerRelativeX / actualScale;
+          const cornerImgY = cornerRelativeY / actualScale;
 
           // 检查角点是否在放大区域内
           if (cornerImgX >= sourceX && cornerImgX <= sourceX + sourceWidth &&

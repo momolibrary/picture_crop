@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Download, RotateCw, Check, ArrowLeft } from 'lucide-react';
+import { X, Download, RotateCw, Check, ArrowLeft, Eye, Sparkles } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { apiService } from '../services/api';
 import type { ProcessedImage } from '../types';
@@ -29,7 +29,7 @@ export function PreviewModal({
   const [isConfirming, setIsConfirming] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [imageInfo, setImageInfo] = useState<{ width: number; height: number } | null>(null);
-  const { setError, updateImage } = useAppStore();
+  const { setError, updateImage, moveToNextImage, settings } = useAppStore();
 
   // 生成预览图片
   useEffect(() => {
@@ -199,7 +199,15 @@ export function PreviewModal({
         if (result.success) {
           // 更新图片状态为已处理
           updateImage(image.id, { status: 'completed' });
+          
+          // 关闭预览模态框
           onClose();
+          
+          // 如果启用了自动下一张功能，自动切换到下一张图片
+          if (settings.autoNext) {
+            moveToNextImage();
+          }
+          
           console.log('裁剪成功:', result);
         } else {
           setError(result.message || '裁剪失败');
@@ -241,7 +249,10 @@ export function PreviewModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{showConfirmation ? '确认裁剪结果' : '正在生成预览...'}</h2>
+          <h2>
+            <Eye size={24} />
+            {showConfirmation ? '确认裁剪结果' : '正在生成预览...'}
+          </h2>
           <button className="modal-close" onClick={onClose}>
             <X size={24} />
           </button>
@@ -251,13 +262,14 @@ export function PreviewModal({
           {isGeneratingPreview ? (
             <div className="processing-state">
               <div className="processing-spinner">
-                <RotateCw className="spin" size={48} />
+                <Sparkles className="spin" size={48} />
               </div>
               <h3>正在生成预览图片...</h3>
+              <p>请稍候，我们正在为您生成高质量的裁剪预览</p>
               {imageInfo && (
                 <div className="image-info">
-                  <p>原图尺寸: {imageInfo.width} × {imageInfo.height}</p>
-                  <p>Canvas尺寸: {canvasWidth} × {canvasHeight}</p>
+                  <p><strong>原图尺寸:</strong> {imageInfo.width} × {imageInfo.height} 像素</p>
+                  <p><strong>Canvas尺寸:</strong> {canvasWidth} × {canvasHeight} 像素</p>
                 </div>
               )}
             </div>
@@ -265,30 +277,40 @@ export function PreviewModal({
             <div className="preview-content">
               <img
                 src={previewImageUrl}
-                alt="Preview"
+                alt="预览图片"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '70vh',
+                  maxHeight: '60vh',
                   objectFit: 'contain',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
+                  border: '1px solid #e9ecef',
+                  borderRadius: '12px'
                 }}
               />
               
               <div className="confirmation-text">
-                <p>这是裁剪后的预览图片。如果效果满意，请点击"确认裁剪"来完成处理。</p>
-                <p className="warning">注意：确认后将执行实际裁剪并移动原文件到已处理目录。</p>
+                <p>
+                  <strong>📸 预览效果展示</strong>
+                </p>
+                <p>
+                  这是裁剪后的预览图片。如果效果满意，请点击 <strong>"确认裁剪"</strong> 来完成处理。
+                  您也可以点击 <strong>"返回修改"</strong> 来调整裁剪区域。
+                </p>
+                <div className="warning">
+                  <strong>⚠️ 重要提醒:</strong> 确认后将执行实际裁剪并将原文件移动到已处理目录。此操作不可撤销。
+                </div>
                 {imageInfo && (
                   <div className="coordinate-info">
-                    <p>原图: {imageInfo.width} × {imageInfo.height} 像素</p>
-                    <p>Canvas: {canvasWidth} × {canvasHeight} 像素</p>
+                    <p><strong>原始图片:</strong> {imageInfo.width} × {imageInfo.height} 像素</p>
+                    <p><strong>画布尺寸:</strong> {canvasWidth} × {canvasHeight} 像素</p>
+                    <p><strong>处理状态:</strong> 预览已生成，等待确认</p>
                   </div>
                 )}
               </div>
             </div>
           ) : (
             <div className="error-state">
-              <p>预览生成失败，请重试。</p>
+              <p>❌ 预览生成失败，请重试。</p>
+              <p>请检查网络连接或重新选择裁剪区域。</p>
             </div>
           )}
         </div>

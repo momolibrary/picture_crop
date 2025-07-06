@@ -51,6 +51,10 @@ interface AppState {
   // Reset functions
   resetView: () => void;
   clearAll: () => void;
+  
+  // Navigation functions
+  getNextImage: () => ProcessedImage | null;
+  moveToNextImage: () => void;
 }
 
 const defaultViewState: ViewState = {
@@ -94,14 +98,49 @@ export const useAppStore = create<AppState>((set, get) => ({
     currentImage: state.currentImage?.id === id ? null : state.currentImage
   })),
   
-  updateImage: (id, updates) => set((state) => ({
-    images: state.images.map(img => 
-      img.id === id ? { ...img, ...updates } : img
-    ),
-    currentImage: state.currentImage?.id === id 
-      ? { ...state.currentImage, ...updates } 
-      : state.currentImage
-  })),
+  updateImage: (id, updates) => set((state) => {
+    // Find the image in pending list
+    const pendingIndex = state.images.findIndex(img => img.id === id);
+    
+    if (pendingIndex !== -1) {
+      const updatedImage = { ...state.images[pendingIndex], ...updates };
+      
+      // If the image status is changed to completed, move it to processedImages
+      if (updates.status === 'completed') {
+        return {
+          images: state.images.filter(img => img.id !== id),
+          processedImages: [...state.processedImages, updatedImage],
+          currentImage: state.currentImage?.id === id ? null : state.currentImage
+        };
+      } else {
+        // Otherwise, just update the image in place
+        return {
+          images: state.images.map(img => 
+            img.id === id ? updatedImage : img
+          ),
+          currentImage: state.currentImage?.id === id 
+            ? updatedImage 
+            : state.currentImage
+        };
+      }
+    }
+    
+    // If not found in pending, check processed images
+    const processedIndex = state.processedImages.findIndex(img => img.id === id);
+    if (processedIndex !== -1) {
+      return {
+        processedImages: state.processedImages.map(img => 
+          img.id === id ? { ...img, ...updates } : img
+        ),
+        currentImage: state.currentImage?.id === id 
+          ? { ...state.currentImage, ...updates } 
+          : state.currentImage
+      };
+    }
+    
+    // Image not found, return unchanged state
+    return state;
+  }),
 
   refreshFromServer: async () => {
     try {
@@ -243,4 +282,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     viewState: defaultViewState,
     error: null,
   }),
+
+  // Helper function to get next image
+  getNextImage: () => {
+    const state = get();
+    if (!state.currentImage) return null;
+    
+    // Find current image index in the pending images list
+    const currentIndex = state.images.findIndex(img => img.id === state.currentImage?.id);
+    if (currentIndex === -1) return null;
+    
+    // Get next pending image
+    for (let i = currentIndex + 1; i < state.images.length; i++) {
+      if (state.images[i].status === 'pending') {
+        return state.images[i];
+      }
+    }
+    
+    // If no next image found, return the first pending image
+    return state.images.find(img => img.status === 'pending') || null;
+  },
+
+  // Move to next image automatically
+  moveToNextImage: () => {
+    const state = get();
+    if (!state.settings.autoNext) return;
+    
+    const nextImage = get().getNextImage();
+    if (nextImage) {
+      set({ currentImage: nextImage });
+      // Reset view when switching images
+      get().resetView();
+    }
+  },
 }));

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预览模态框测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #6c757d;
+            font-size: 1.125rem;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #0d6efd;
+        }
+        
+        .feature-card h3 {
+            color: #495057;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .feature-card p {
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-fixed {
+            background: #cce5ff;
+            color: #0056b3;
+        }
+        
+        .demo-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 2rem auto;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .improvements-list {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .improvements-list h3 {
+            color: #495057;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+        
+        .improvement-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .improvement-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-top: 0.125rem;
+        }
+        
+        .improvement-content h4 {
+            margin: 0 0 0.5rem 0;
+            color: #495057;
+        }
+        
+        .improvement-content p {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 图片裁剪工具改进完成</h1>
+            <p>预览模态框美化与工作流程优化</p>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>
+                    ✨ 美观的预览弹窗
+                </h3>
+                <p>全新设计的预览模态框，采用现代化的UI设计，包含渐变背景、毛玻璃效果和流畅的动画过渡。</p>
+                <span class="feature-status status-completed">✅ 已完成</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>
+                    🎯 瞄准镜修复
+                </h3>
+                <p>修复了缩放后瞄准镜红点不跟随的问题，确保在任何缩放级别下都能准确显示裁剪点位置。</p>
+                <span class="feature-status status-fixed">🔧 已修复</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>
+                    🔄 自动工作流程
+                </h3>
+                <p>确认裁剪后自动加载下一张待处理图片，已处理图片自动从列表中移除，提高工作效率。</p>
+                <span class="feature-status status-completed">✅ 已完成</span>
+            </div>
+        </div>
+        
+        <button class="demo-button" onclick="openApp()">
+            🚀 体验改进后的应用
+        </button>
+        
+        <div class="improvements-list">
+            <h3>🛠️ 详细改进清单</h3>
+            
+            <div class="improvement-item">
+                <div class="improvement-icon">1</div>
+                <div class="improvement-content">
+                    <h4>预览模态框美化</h4>
+                    <p>• 添加了渐变背景和毛玻璃效果<br>
+                       • 改进了按钮布局和交互动画<br>
+                       • 优化了加载状态和错误提示的展示<br>
+                       • 增加了详细的处理信息显示</p>
+                </div>
+            </div>
+            
+            <div class="improvement-item">
+                <div class="improvement-icon">2</div>
+                <div class="improvement-content">
+                    <h4>瞄准镜跟随修复</h4>
+                    <p>• 修复了坐标转换逻辑中的缩放计算问题<br>
+                       • 确保红点在任何缩放级别下都能正确跟随<br>
+                       • 改进了角点在瞄准镜中的位置显示</p>
+                </div>
+            </div>
+            
+            <div class="improvement-item">
+                <div class="improvement-icon">3</div>
+                <div class="improvement-content">
+                    <h4>自动化工作流程</h4>
+                    <p>• 裁剪确认后自动切换到下一张图片<br>
+                       • 已处理图片自动从待处理列表移除<br>
+                       • 支持连续批量处理模式<br>
+                       • 可通过设置禁用自动切换功能</p>
+                </div>
+            </div>
+            
+            <div class="improvement-item">
+                <div class="improvement-icon">4</div>
+                <div class="improvement-content">
+                    <h4>用户体验优化</h4>
+                    <p>• 添加了更详细的状态反馈<br>
+                       • 改进了按钮的视觉反馈效果<br>
+                       • 优化了响应式设计<br>
+                       • 增强了错误处理和提示</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openApp() {
+            // 在新标签页打开应用
+            window.open('http://localhost:5173', '_blank');
+        }
+    </script>
+</body>
+</html>
