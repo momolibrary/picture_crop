@@ -177,8 +177,15 @@ export const apiService = {
     });
   },
 
-  // 生成预览
+  // 生成预览（只预览，不实际执行截图）
   async generatePreview(filename: string, points: number[][]): Promise<string> {
+    // 验证坐标
+    if (!points || points.length !== 4) {
+      throw new ApiError(400, '需要4个角点坐标');
+    }
+
+    console.log('生成预览，文件:', filename, '坐标:', points);
+
     const response = await fetch(`${API_BASE_URL}/api/preview/${encodeURIComponent(filename)}`, {
       method: 'POST',
       headers: {
@@ -196,8 +203,15 @@ export const apiService = {
     return URL.createObjectURL(blob);
   },
 
-  // 执行裁剪
+  // 执行裁剪（确认截图，执行实际的裁剪和文件移动）
   async cropImage(filename: string, points: number[][]): Promise<CropResponse> {
+    // 验证坐标
+    if (!points || points.length !== 4) {
+      throw new ApiError(400, '需要4个角点坐标');
+    }
+
+    console.log('执行裁剪，文件:', filename, '坐标:', points);
+
     return apiRequest<CropResponse>(`/api/crop/${encodeURIComponent(filename)}`, {
       method: 'POST',
       body: JSON.stringify({ points }),

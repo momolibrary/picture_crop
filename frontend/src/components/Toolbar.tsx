@@ -17,9 +17,11 @@ import { apiService } from '../services/api';
 
 interface ToolbarProps {
   className?: string;
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
-export function Toolbar({ className }: ToolbarProps) {
+export function Toolbar({ className, canvasWidth = 800, canvasHeight = 600 }: ToolbarProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
@@ -232,6 +234,9 @@ export function Toolbar({ className }: ToolbarProps) {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         image={currentImage}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        viewState={viewState}
       />
 
       {/* Settings Panel */}

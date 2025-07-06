@@ -2,10 +2,16 @@ import { useAppStore } from './store/useAppStore';
 import { Canvas } from './components/Canvas';
 import { ImageUpload, ImageList } from './components/ImageUpload';
 import { Toolbar } from './components/Toolbar';
+import { useState, useCallback } from 'react';
 import './App.css';
 
 function App() {
   const { currentImage, error, setError } = useAppStore();
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  const handleCanvasResize = useCallback((width: number, height: number) => {
+    setCanvasSize({ width, height });
+  }, []);
 
   return (
     <div className="app">
@@ -32,10 +38,17 @@ function App() {
 
           {/* Main content */}
           <div className="main-content">
-            <Toolbar className="toolbar-section" />
+            <Toolbar 
+              className="toolbar-section" 
+              canvasWidth={canvasSize.width}
+              canvasHeight={canvasSize.height}
+            />
             <div className="canvas-section">
               {currentImage ? (
-                <Canvas className="main-canvas" />
+                <Canvas 
+                  className="main-canvas" 
+                  onCanvasResize={handleCanvasResize}
+                />
               ) : (
                 <div className="empty-state">
                   <h2>Welcome to Image Processing Tool</h2>

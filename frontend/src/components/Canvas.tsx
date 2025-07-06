@@ -4,13 +4,15 @@ import { useAppStore } from '../store/useAppStore';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import { loadImage, drawCropArea } from '../utils/imageProcessing';
 import { createDefaultCropArea } from '../utils/geometry';
+import { calculateImageDisplayInfo } from '../utils/coordinateTransform';
 import { Magnifier } from './Magnifier';
 
 interface CanvasProps {
   className?: string;
+  onCanvasResize?: (width: number, height: number) => void;
 }
 
-export function Canvas({ className }: CanvasProps) {
+export function Canvas({ className, onCanvasResize }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const renderFrameRef = useRef<number>(0);
   const lastRenderTimeRef = useRef<number>(0);
@@ -67,6 +69,9 @@ export function Canvas({ className }: CanvasProps) {
         canvas.width = containerWidth;
         canvas.height = containerHeight;
         
+        // 通知父组件Canvas尺寸变化
+        onCanvasResize?.(canvas.width, canvas.height);
+        
         // Create default crop area based on canvas size
         const cropArea = createDefaultCropArea(canvas.width, canvas.height);
         
@@ -81,7 +86,7 @@ export function Canvas({ className }: CanvasProps) {
     };
 
     initializeCropArea();
-  }, [currentImage, updateImage]);
+  }, [currentImage, updateImage, onCanvasResize]);
 
   // Render canvas content with optimized rendering
   useEffect(() => {

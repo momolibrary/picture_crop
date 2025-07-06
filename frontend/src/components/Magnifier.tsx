@@ -56,32 +56,31 @@ export function Magnifier({
         const canvasElement = document.querySelector('canvas'); // 主画布
         if (!canvasElement) return;
 
-        // 计算图片在主画布中的位置和尺寸（与主Canvas组件相同的逻辑）
-        const scale = Math.min(
+        // 计算图片在主画布中的基础位置和尺寸（变换前）
+        const baseScale = Math.min(
           canvasElement.width / img.width,
           canvasElement.height / img.height
         );
         
-        const imgWidth = img.width * scale;
-        const imgHeight = img.height * scale;
-        const imgX = (canvasElement.width - imgWidth) / 2;
-        const imgY = (canvasElement.height - imgHeight) / 2;
+        const baseImgWidth = img.width * baseScale;
+        const baseImgHeight = img.height * baseScale;
+        const baseImgX = (canvasElement.width - baseImgWidth) / 2;
+        const baseImgY = (canvasElement.height - baseImgHeight) / 2;
 
-        // 应用变换后的鼠标位置（模拟主画布的变换）
-        // 先应用逆变换得到变换前的画布坐标
-        const transformedCanvasX = (canvasPosition.x - offset.x) / zoom;
-        const transformedCanvasY = (canvasPosition.y - offset.y) / zoom;
+        // canvasPosition 是经过 screenToCanvas 转换的坐标
+        // 它已经考虑了 zoom 和 offset 的逆变换
+        // 现在需要将其转换为图片坐标系
         
-        // 转换为图片内的相对坐标
-        const relativeX = transformedCanvasX - imgX;
-        const relativeY = transformedCanvasY - imgY;
+        // 转换为图片内的相对坐标（基于变换前的图片位置）
+        const relativeX = canvasPosition.x - baseImgX;
+        const relativeY = canvasPosition.y - baseImgY;
         
         // 转换为原始图片坐标
-        const imgOriginalX = relativeX / scale;
-        const imgOriginalY = relativeY / scale;
+        const imgOriginalX = relativeX / baseScale;
+        const imgOriginalY = relativeY / baseScale;
 
         // 计算放大区域的范围（在原始图片坐标系中）
-        const zoomRadius = MAGNIFIER_SIZE / (2 * MAGNIFIER_ZOOM * scale);
+        const zoomRadius = MAGNIFIER_SIZE / (2 * MAGNIFIER_ZOOM * baseScale);
         const sourceX = Math.max(0, Math.min(img.width - zoomRadius * 2, imgOriginalX - zoomRadius));
         const sourceY = Math.max(0, Math.min(img.height - zoomRadius * 2, imgOriginalY - zoomRadius));
         const sourceWidth = Math.min(img.width - sourceX, zoomRadius * 2);
@@ -108,17 +107,17 @@ export function Magnifier({
           
           const corner = corners[selectedCorner];
           
-          // 应用相同的变换逻辑
-          const cornerTransformedX = (corner.x - offset.x) / zoom;
-          const cornerTransformedY = (corner.y - offset.y) / zoom;
+          // 角点坐标是画布坐标系中的点，与鼠标位置使用相同的坐标系
+          const cornerCanvasX = corner.x;
+          const cornerCanvasY = corner.y;
           
-          // 将角点坐标转换为图片内的相对坐标
-          const cornerRelativeX = cornerTransformedX - imgX;
-          const cornerRelativeY = cornerTransformedY - imgY;
+          // 将角点坐标转换为图片内的相对坐标（与鼠标位置使用相同的变换）
+          const cornerRelativeX = cornerCanvasX - baseImgX;
+          const cornerRelativeY = cornerCanvasY - baseImgY;
           
           // 转换为原始图片坐标
-          const cornerImgX = cornerRelativeX / scale;
-          const cornerImgY = cornerRelativeY / scale;
+          const cornerImgX = cornerRelativeX / baseScale;
+          const cornerImgY = cornerRelativeY / baseScale;
 
           // 检查角点是否在放大区域内
           if (cornerImgX >= sourceX && cornerImgX <= sourceX + sourceWidth &&
