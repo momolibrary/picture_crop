@@ -194,6 +194,12 @@ def generate_edit_html(filename):
     
     <div class="canvas-container">
         <div class="zoom-info">缩放: <span id="zoomLevel">100%</span></div>
+        <div class="canvas-top-controls">
+            <button class="floating-preview-btn" onclick="showPreview()" title="预览裁剪效果">
+                <span class="btn-icon">👁️</span>
+                <span class="btn-text">预览</span>
+            </button>
+        </div>
         <canvas id="canvas" width="900" height="700"></canvas>
         <!-- 瞄准镜放大窗口 -->
         <div id="magnifier" class="magnifier">
@@ -435,6 +441,9 @@ def get_edit_page_styles():
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             background-color: white;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
         }
         
         /* 全新的控制面板样式 */
@@ -913,6 +922,50 @@ def get_edit_page_styles():
             font-size: 14px;
             z-index: 10;
         }
+        
+        /* Canvas右上角控制按钮区域 */
+        .canvas-top-controls {
+            position: absolute;
+            top: 20px;
+            right: 100px;
+            z-index: 15;
+        }
+        
+        .floating-preview-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+            min-width: 100px;
+        }
+        
+        .floating-preview-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1abc9c);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+        }
+        
+        .floating-preview-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .floating-preview-btn .btn-icon {
+            font-size: 16px;
+        }
+        
+        .floating-preview-btn .btn-text {
+            font-size: 14px;
+        }
         /* 瞄准镜放大窗口 */
         .magnifier {
             position: absolute;
@@ -1116,6 +1169,23 @@ def get_edit_page_javascript(filename):
         const magnifierSize = 200;
         const magnifierZoom = 4; // 放大倍数
         
+        // 坐标转换函数：将显示坐标转换为canvas内部坐标
+        function getCanvasCoordinates(clientX, clientY) {{
+            const rect = canvas.getBoundingClientRect();
+            const displayX = clientX - rect.left;
+            const displayY = clientY - rect.top;
+            
+            // 计算缩放比例（显示尺寸 vs 内部尺寸）
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            // 转换为canvas内部坐标
+            return {{
+                x: displayX * scaleX,
+                y: displayY * scaleY
+            }};
+        }}
+        
         img.onload = function() {{
             console.log('图片加载成功:', img.width, 'x', img.height);
             if (img.width === 0 || img.height === 0) {{
@@ -1142,7 +1212,7 @@ def get_edit_page_javascript(filename):
             const maxWidth = canvas.width - 40;
             const maxHeight = canvas.height - 40;
             baseScale = Math.min(maxWidth / img.width, maxHeight / img.height);
-            console.log('计算的基础缩放比例:', baseScale);
+            console.log('计算的基础缩放比例:', baseScale, '画布尺寸:', canvas.width, 'x', canvas.height);
             
             // 先初始化缩放和偏移，再设置角点
             zoomFactor = 1;
@@ -1196,6 +1266,22 @@ def get_edit_page_javascript(filename):
         
         // 初始化缩放步长控件
         initializeZoomStepControls();
+        
+        // 添加窗口resize事件监听器，动态调整canvas尺寸
+        window.addEventListener('resize', function() {{
+            console.log('窗口尺寸改变，重新调整canvas');
+            if (img.complete && img.naturalWidth > 0) {{
+                // 重新计算基础缩放比例
+                const maxWidth = canvas.width - 40;
+                const maxHeight = canvas.height - 40;
+                baseScale = Math.min(maxWidth / img.width, maxHeight / img.height);
+                console.log('重新计算的基础缩放比例:', baseScale);
+                
+                // 更新缩放和重绘
+                updateScale();
+                draw();
+            }}
+        }});
         
         function initializeZoomStepControls() {{
             const slider = document.getElementById('zoomStepSlider');
@@ -1471,10 +1557,10 @@ def get_edit_page_javascript(filename):
             // 清除瞄准镜画布
             magnifierCtx.clearRect(0, 0, magnifierSize, magnifierSize);
             
-            // 计算在原图上的位置
-            const rect = canvas.getBoundingClientRect();
-            const canvasX = mouseX - rect.left;
-            const canvasY = mouseY - rect.top;
+            // 使用我们的坐标转换函数
+            const coords = getCanvasCoordinates(mouseX, mouseY);
+            const canvasX = coords.x;
+            const canvasY = coords.y;
             
             // 转换为图片坐标
             const imgX = (canvasX - offsetX) / scale;
@@ -1711,34 +1797,40 @@ def get_edit_page_javascript(filename):
         }}
         
         canvas.addEventListener('mousedown', function(e) {{
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
             
             // 检查是否点击了角点（优先级更高）
-            for (let i = 0; i < 4; i++) {{
-                const dx = x - cornerPoints[i][0];
-                const dy = y - cornerPoints[i][1];
-                if (Math.sqrt(dx*dx + dy*dy) < 15) {{
-                    isDragging = true;
-                    dragIndex = i;
-                    dragType = CORNER_POINT;
-                    canvas.style.cursor = 'move';
-                    updateMagnifier(e.clientX, e.clientY);
-                    return;
+            for (let i = 0; i < cornerPoints.length && i < 4; i++) {{
+                if (cornerPoints[i] && Array.isArray(cornerPoints[i]) && cornerPoints[i].length >= 2) {{
+                    const dx = x - cornerPoints[i][0];
+                    const dy = y - cornerPoints[i][1];
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < 25) {{
+                        isDragging = true;
+                        dragIndex = i;
+                        dragType = CORNER_POINT;
+                        canvas.style.cursor = 'move';
+                        updateMagnifier(e.clientX, e.clientY);
+                        return;
+                    }}
                 }}
             }}
             
-            // 检查是否点击了边的中点（增大检测范围）
-            for (let i = 0; i < 4; i++) {{
-                const dx = x - edgePoints[i][0];
-                const dy = y - edgePoints[i][1];
-                if (Math.sqrt(dx*dx + dy*dy) < 15) {{
-                    isDragging = true;
-                    dragIndex = i;
-                    dragType = EDGE_POINT;
-                    canvas.style.cursor = 'grab';
-                    return;
+            // 检查是否点击了边的中点
+            for (let i = 0; i < edgePoints.length && i < 4; i++) {{
+                if (edgePoints[i] && Array.isArray(edgePoints[i]) && edgePoints[i].length >= 2) {{
+                    const dx = x - edgePoints[i][0];
+                    const dy = y - edgePoints[i][1];
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < 25) {{
+                        isDragging = true;
+                        dragIndex = i;
+                        dragType = EDGE_POINT;
+                        canvas.style.cursor = 'grab';
+                        return;
+                    }}
                 }}
             }}
             
@@ -1750,34 +1842,38 @@ def get_edit_page_javascript(filename):
         }});
         
         canvas.addEventListener('mousemove', function(e) {{
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            const x = coords.x;
+            const y = coords.y;
             
             if (!isDragging && !isPanning) {{
                 // 更新鼠标指针样式
                 let overControl = false;
                 
                 // 检查是否悬停在角点上
-                for (let i = 0; i < 4; i++) {{
-                    const dx = x - cornerPoints[i][0];
-                    const dy = y - cornerPoints[i][1];
-                    if (Math.sqrt(dx*dx + dy*dy) < 15) {{
-                        canvas.style.cursor = 'move';
-                        overControl = true;
-                        break;
+                for (let i = 0; i < cornerPoints.length && i < 4; i++) {{
+                    if (cornerPoints[i] && Array.isArray(cornerPoints[i]) && cornerPoints[i].length >= 2) {{
+                        const dx = x - cornerPoints[i][0];
+                        const dy = y - cornerPoints[i][1];
+                        if (Math.sqrt(dx*dx + dy*dy) < 25) {{
+                            canvas.style.cursor = 'move';
+                            overControl = true;
+                            break;
+                        }}
                     }}
                 }}
                 
                 // 检查是否悬停在边控制点上
                 if (!overControl) {{
-                    for (let i = 0; i < 4; i++) {{
-                        const dx = x - edgePoints[i][0];
-                        const dy = y - edgePoints[i][1];
-                        if (Math.sqrt(dx*dx + dy*dy) < 15) {{
-                            canvas.style.cursor = 'grab';
-                            overControl = true;
-                            break;
+                    for (let i = 0; i < edgePoints.length && i < 4; i++) {{
+                        if (edgePoints[i] && Array.isArray(edgePoints[i]) && edgePoints[i].length >= 2) {{
+                            const dx = x - edgePoints[i][0];
+                            const dy = y - edgePoints[i][1];
+                            if (Math.sqrt(dx*dx + dy*dy) < 25) {{
+                                canvas.style.cursor = 'grab';
+                                overControl = true;
+                                break;
+                            }}
                         }}
                     }}
                 }}
@@ -1867,9 +1963,9 @@ def get_edit_page_javascript(filename):
         canvas.addEventListener('wheel', function(e) {{
             e.preventDefault(); // 防止页面滚动
             
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            const coords = getCanvasCoordinates(e.clientX, e.clientY);
+            const mouseX = coords.x;
+            const mouseY = coords.y;
             
             // 保存当前缩放状态
             const oldScale = scale;
