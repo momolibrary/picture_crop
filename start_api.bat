@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 echo Starting Image Cropping API Server...
 echo.
 echo API Documentation will be available at:
