@@ -20,8 +20,53 @@ export function createImageFromFile(file: File): ProcessedImage {
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load image'));
+    
+    // 添加超时机制
+    const timeout = setTimeout(() => {
+      reject(new Error('Image load timeout'));
+    }, 10000); // 10秒超时
+    
+    img.onload = () => {
+      clearTimeout(timeout);
+      console.log('Image loaded successfully:', src, 'Size:', img.width, 'x', img.height);
+      console.log('Image properties:', {
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        width: img.width,
+        height: img.height
+      });
+      
+      // 验证图片确实加载成功
+      if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+        reject(new Error('Image loaded but has zero dimensions'));
+        return;
+      }
+      
+      resolve(img);
+    };
+    
+    img.onerror = (error) => {
+      clearTimeout(timeout);
+      console.error('Failed to load image:', src, error);
+      console.error('Error event details:', {
+        type: 'error',
+        src: img.src,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        complete: img.complete
+      });
+      reject(new Error(`Failed to load image: ${src}`));
+    };
+    
+    // 设置 crossOrigin 以避免 Canvas 污染问题
+    img.crossOrigin = 'anonymous';
+    
+    // 添加额外的调试信息
+    console.log('Started loading image:', src);
+    console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
+    
+    // 设置 src 最后，确保事件监听器已经绑定
     img.src = src;
   });
 }
@@ -98,11 +143,17 @@ export function drawCropArea(
     cropArea.bottomLeft
   ];
   
+  console.log('Drawing crop area with points:', points);
+  console.log('Canvas size:', ctx.canvas.width, 'x', ctx.canvas.height);
+  console.log('Zoom:', zoom, 'Offset:', offset);
+  
   // Transform points with zoom and offset
   const transformedPoints = points.map(point => ({
     x: point.x * zoom + offset.x,
     y: point.y * zoom + offset.y
   }));
+  
+  console.log('Transformed points:', transformedPoints);
   
   // 使用 save/restore 来避免状态污染
   ctx.save();
@@ -136,6 +187,8 @@ export function drawCropArea(
   }
   ctx.closePath();
   ctx.stroke();
+  
+  console.log('Crop area outline drawn');
   
   // Draw corner handles - 批量绘制以提高性能
   transformedPoints.forEach((point, index) => {

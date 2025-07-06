@@ -86,7 +86,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  setCurrentImage: (image) => set({ currentImage: image }),
+  setCurrentImage: (image) => {
+    console.log('Setting current image:', image);
+    set({ currentImage: image });
+  },
   
   addImage: (image) => set((state) => ({ 
     images: [...state.images, image],
@@ -150,16 +153,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       const paginatedData = await apiService.getFilesPaginated(1, get().pageSize);
       
       // Convert pending files to ProcessedImage format with thumbnail URLs
-      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => ({
-        id: fileInfo.filename,
-        originalName: fileInfo.filename,
-        originalUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/image/${encodeURIComponent(fileInfo.filename)}`,
-        thumbnailUrl: fileInfo.has_thumbnail ? 
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${fileInfo.thumbnail_url}` : 
-          undefined,
-        timestamp: Date.now(),
-        status: 'pending' as const
-      }));
+      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const originalUrl = `${baseUrl}/api/image/${encodeURIComponent(fileInfo.filename)}`;
+        const thumbnailUrl = fileInfo.has_thumbnail ? 
+          `${baseUrl}${fileInfo.thumbnail_url}` : 
+          undefined;
+        
+        console.log('Creating image entry:', {
+          filename: fileInfo.filename,
+          baseUrl,
+          originalUrl,
+          thumbnailUrl,
+          env: import.meta.env.VITE_API_BASE_URL
+        });
+        
+        return {
+          id: fileInfo.filename,
+          originalName: fileInfo.filename,
+          originalUrl,
+          thumbnailUrl,
+          timestamp: Date.now(),
+          status: 'pending' as const
+        };
+      });
 
       // Convert processed files to ProcessedImage format
       const completedImages: ProcessedImage[] = paginatedData.processed_files.map(filename => ({
@@ -195,16 +212,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       const paginatedData = await apiService.getFilesPaginated(page, get().pageSize);
       
       // Convert pending files to ProcessedImage format with thumbnail URLs
-      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => ({
-        id: fileInfo.filename,
-        originalName: fileInfo.filename,
-        originalUrl: `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/image/${encodeURIComponent(fileInfo.filename)}`,
-        thumbnailUrl: fileInfo.has_thumbnail ? 
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}${fileInfo.thumbnail_url}` : 
-          undefined,
-        timestamp: Date.now(),
-        status: 'pending' as const
-      }));
+      const pendingImages: ProcessedImage[] = paginatedData.pending_files.map(fileInfo => {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const originalUrl = `${baseUrl}/api/image/${encodeURIComponent(fileInfo.filename)}`;
+        const thumbnailUrl = fileInfo.has_thumbnail ? 
+          `${baseUrl}${fileInfo.thumbnail_url}` : 
+          undefined;
+        
+        console.log('Creating image entry for page:', {
+          filename: fileInfo.filename,
+          baseUrl,
+          originalUrl,
+          thumbnailUrl,
+          env: import.meta.env.VITE_API_BASE_URL
+        });
+        
+        return {
+          id: fileInfo.filename,
+          originalName: fileInfo.filename,
+          originalUrl,
+          thumbnailUrl,
+          timestamp: Date.now(),
+          status: 'pending' as const
+        };
+      });
 
       set({ 
         paginatedData, 

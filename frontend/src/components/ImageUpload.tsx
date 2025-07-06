@@ -313,7 +313,11 @@ export function ImageList({ className }: ImageListProps) {
           <div
             key={image.id}
             className={`image-item ${currentImage?.id === image.id ? 'active' : ''} status-${image.status}`}
-            onClick={() => setCurrentImage(image)}
+            onClick={() => {
+              console.log('Image clicked:', image);
+              console.log('Setting as current image');
+              setCurrentImage(image);
+            }}
           >
             <div className="image-thumbnail-container">
               <img

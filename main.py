@@ -290,7 +290,15 @@ async def get_thumbnail(filename: str):
         else:
             raise HTTPException(status_code=404, detail="原图文件不存在")
     
-    return FileResponse(thumbnail_path, media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
+    # 添加CORS头部，确保前端可以访问缩略图
+    headers = {
+        "Cache-Control": "max-age=3600",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET",
+        "Access-Control-Allow-Headers": "*"
+    }
+    
+    return FileResponse(thumbnail_path, media_type="image/jpeg", headers=headers)
 
 
 @app.post("/api/upload")
@@ -347,7 +355,15 @@ async def get_image(filename: str):
     }
     media_type = media_type_map.get(file_extension, 'image/jpeg')
     
-    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "no-cache"})
+    # 添加CORS头部，确保前端可以访问图片
+    headers = {
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET",
+        "Access-Control-Allow-Headers": "*"
+    }
+    
+    return FileResponse(path, media_type=media_type, headers=headers)
 @app.post("/api/preview/{filename}")
 async def preview_crop(filename: str, request: CropRequest):
     """生成裁剪预览"""
