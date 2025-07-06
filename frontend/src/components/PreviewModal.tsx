@@ -197,16 +197,16 @@ export function PreviewModal({
         const result = await apiService.cropImage(image.id, imageCoordinates);
         
         if (result.success) {
-          // 更新图片状态为已处理
+          // 如果启用了自动下一张功能，先切换到下一张图片（传递当前图片ID）
+          if (settings.autoNext) {
+            moveToNextImage(image.id);
+          }
+          
+          // 然后更新图片状态为已处理（这会将其从待处理列表中移除）
           updateImage(image.id, { status: 'completed' });
           
           // 关闭预览模态框
           onClose();
-          
-          // 如果启用了自动下一张功能，自动切换到下一张图片
-          if (settings.autoNext) {
-            moveToNextImage();
-          }
           
           console.log('裁剪成功:', result);
         } else {

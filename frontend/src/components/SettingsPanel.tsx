@@ -18,7 +18,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   const handleReset = () => {
     const defaultSettings = {
-      autoNext: false,
+      autoNext: true,
       zoomStep: 0.25,
       showGrid: false,
       snapToGrid: false,

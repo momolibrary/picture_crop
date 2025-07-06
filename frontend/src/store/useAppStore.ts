@@ -53,8 +53,8 @@ interface AppState {
   clearAll: () => void;
   
   // Navigation functions
-  getNextImage: () => ProcessedImage | null;
-  moveToNextImage: () => void;
+  getNextImage: (currentImageId?: string) => ProcessedImage | null;
+  moveToNextImage: (currentImageId?: string) => void;
 }
 
 const defaultViewState: ViewState = {
@@ -315,12 +315,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
 
   // Helper function to get next image
-  getNextImage: () => {
+  getNextImage: (currentImageId?: string) => {
     const state = get();
-    if (!state.currentImage) return null;
+    const imageId = currentImageId || state.currentImage?.id;
+    if (!imageId) return null;
     
     // Find current image index in the pending images list
-    const currentIndex = state.images.findIndex(img => img.id === state.currentImage?.id);
+    const currentIndex = state.images.findIndex(img => img.id === imageId);
     if (currentIndex === -1) return null;
     
     // Get next pending image
@@ -335,11 +336,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Move to next image automatically
-  moveToNextImage: () => {
+  moveToNextImage: (currentImageId?: string) => {
     const state = get();
     if (!state.settings.autoNext) return;
     
-    const nextImage = get().getNextImage();
+    const nextImage = get().getNextImage(currentImageId);
     if (nextImage) {
       set({ currentImage: nextImage });
       // Reset view when switching images
